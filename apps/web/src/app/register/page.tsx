@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, type SVGProps } from 'react';
 import {
   Alert,
   Button,
@@ -10,6 +10,7 @@ import {
   FieldError,
   Form,
   Input,
+  InputGroup,
   Label,
   Spinner,
   TextField,
@@ -18,11 +19,49 @@ import {
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 const EMAIL_PATTERN = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
 
+function EyeIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      viewBox="0 0 24 24"
+      {...props}
+    >
+      <path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function EyeOffIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      viewBox="0 0 24 24"
+      {...props}
+    >
+      <path d="M3 3l18 18" />
+      <path d="M10.6 10.6a3 3 0 0 0 4.24 4.24" />
+      <path d="M9.9 5.1A10.9 10.9 0 0 1 12 5c7 0 10.5 7 10.5 7a13.2 13.2 0 0 1-3.15 4.15M6.6 6.6C3.9 8.3 1.5 12 1.5 12s3.5 7 10.5 7a10.6 10.6 0 0 0 4.2-.85" />
+    </svg>
+  );
+}
+
 export default function RegisterPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] =
+    useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -127,7 +166,12 @@ export default function RegisterPage() {
                 }
               >
                 <Label>Email</Label>
-                <Input placeholder="you@example.com" variant="secondary" />
+                <Input
+                  autoComplete="email"
+                  className="min-h-11"
+                  placeholder="you@example.com"
+                  variant="secondary"
+                />
                 <FieldError />
               </TextField>
 
@@ -135,7 +179,7 @@ export default function RegisterPage() {
                 isRequired
                 minLength={8}
                 name="password"
-                type="password"
+                type={isPasswordVisible ? 'text' : 'password'}
                 value={password}
                 onChange={setPassword}
                 validate={(value) =>
@@ -145,29 +189,88 @@ export default function RegisterPage() {
                 }
               >
                 <Label>Password</Label>
-                <Input placeholder="••••••••" variant="secondary" />
+                <InputGroup className="min-h-11" variant="secondary">
+                  <InputGroup.Input
+                    autoComplete="new-password"
+                    className="min-h-11"
+                    placeholder="••••••••"
+                  />
+                  <InputGroup.Suffix className="pr-1">
+                    <Button
+                      isIconOnly
+                      aria-label={
+                        isPasswordVisible ? 'Hide password' : 'Show password'
+                      }
+                      size="sm"
+                      variant="ghost"
+                      onPress={() =>
+                        setIsPasswordVisible((visible) => !visible)
+                      }
+                    >
+                      {isPasswordVisible ? (
+                        <EyeOffIcon aria-hidden="true" className="size-4" />
+                      ) : (
+                        <EyeIcon aria-hidden="true" className="size-4" />
+                      )}
+                    </Button>
+                  </InputGroup.Suffix>
+                </InputGroup>
                 <Description>Must be at least 8 characters.</Description>
                 <FieldError />
               </TextField>
 
               <TextField
+                key={password}
                 isRequired
                 name="confirmPassword"
-                type="password"
+                type={isConfirmPasswordVisible ? 'text' : 'password'}
                 value={confirmPassword}
                 onChange={setConfirmPassword}
-                validate={(value) =>
-                  value !== password ? 'Passwords do not match' : null
-                }
+                validate={(value) => {
+                  if (!value) return 'Please confirm your password';
+                  return value !== password ? 'Passwords do not match' : null;
+                }}
               >
                 <Label>Confirm password</Label>
-                <Input placeholder="••••••••" variant="secondary" />
+                <InputGroup className="min-h-11" variant="secondary">
+                  <InputGroup.Input
+                    autoComplete="new-password"
+                    className="min-h-11"
+                    placeholder="••••••••"
+                  />
+                  <InputGroup.Suffix className="pr-1">
+                    <Button
+                      isIconOnly
+                      aria-label={
+                        isConfirmPasswordVisible
+                          ? 'Hide password'
+                          : 'Show password'
+                      }
+                      size="sm"
+                      variant="ghost"
+                      onPress={() =>
+                        setIsConfirmPasswordVisible((visible) => !visible)
+                      }
+                    >
+                      {isConfirmPasswordVisible ? (
+                        <EyeOffIcon aria-hidden="true" className="size-4" />
+                      ) : (
+                        <EyeIcon aria-hidden="true" className="size-4" />
+                      )}
+                    </Button>
+                  </InputGroup.Suffix>
+                </InputGroup>
                 <FieldError />
               </TextField>
             </Card.Content>
 
             <Card.Footer className="mt-1 flex flex-col gap-3 sm:mt-2">
-              <Button className="w-full" isPending={isSubmitting} type="submit">
+              <Button
+                className="w-full"
+                isPending={isSubmitting}
+                size="lg"
+                type="submit"
+              >
                 {({ isPending }) => (
                   <>
                     {isPending ? <Spinner color="current" size="sm" /> : null}
