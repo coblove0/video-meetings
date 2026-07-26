@@ -32,5 +32,8 @@ Thumbs.db
 # claude code local settings
 .claude/settings.local.json
 
+# playwright mcp session artifacts
+.playwright-mcp/
+
 # build
 build/
