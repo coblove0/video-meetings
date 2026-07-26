@@ -42,7 +42,7 @@ npm run test                 # runs test:all in every workspace that has one (cu
 To run a single Nest test file or filter by name, use `-w api` to target the workspace and pass jest args through:
 
 ```bash
-npm run test -w api -- app.controller.spec
+npm run test -w api -- some-file.spec
 npm run test -w api -- -t "some test name"
 npm run test:e2e -w api
 ```

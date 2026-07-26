@@ -24,7 +24,7 @@ Equivalent raw scripts inside `apps/api/package.json`: `start`, `start:dev`, `st
 To run a single test or filter by name, pass jest args through the workspace script:
 
 ```bash
-npm run test -w api -- app.controller.spec
+npm run test -w api -- some-file.spec
 npm run test -w api -- -t "some test name"
 npm run test:e2e -w api      # uses test/jest-e2e.json
 ```
@@ -50,7 +50,7 @@ Copy `apps/api/.env.example` to `apps/api/.env` (gitignored) before running the 
 
 ## Architecture
 
-- Feature modules under `src/`: `app.module.ts` wires up `AppController`/`AppService` plus `PrismaModule`, `UsersModule`, `AuthModule`, and `MeetingsModule`, and registers `ConfigModule.forRoot({ isGlobal: true })`.
+- Feature modules under `src/`: `app.module.ts` wires up `PrismaModule`, `UsersModule`, `AuthModule`, and `MeetingsModule`, and registers `ConfigModule.forRoot({ isGlobal: true })`. There's no root `AppController`/`AppService` — the Nest CLI boilerplate for those (plus their spec and the `/ (GET)` e2e test) was removed since nothing in the app used them.
 - Entry point is `src/main.ts`, which bootstraps `AppModule`, applies shared app config via `configureApp()` (see below), and listens on `process.env.PORT ?? 4000` (deliberately not 3000, since that's Next.js's dev port — see `apps/web`).
 - `src/main.ts` uses `void bootstrap();` — keep the `void` operator on the top-level bootstrap call to satisfy the `@typescript-eslint/no-floating-promises` rule.
 - `src/configure-app.ts` exports `configureApp()`, which enables CORS (`CORS_ORIGIN` env var, see § Environment) and applies the global `ValidationPipe` (`whitelist`, `forbidNonWhitelisted`, `transform`). Both `main.ts` and e2e tests call this — e2e tests build the app via `Test.createTestingModule(...).createNestApplication()` directly and never run `main.ts`, so anything `bootstrap()` needs at runtime (pipes, filters, interceptors) must go through this shared helper or it silently won't apply in tests.
