@@ -1,7 +1,7 @@
-import { ConflictException } from '@nestjs/common';
-import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { CommandHandler, CommandBus, ICommandHandler } from '@nestjs/cqrs';
 import * as bcrypt from 'bcrypt';
-import { PrismaService } from '../../../prisma/prisma.service';
+import { CreateUserCommand } from '../../../users/commands/impl/create-user.command';
+import { User } from '../../../generated/prisma';
 import { AuthTokenResponse, TokenService } from '../../token.service';
 import { RegisterCommand } from '../impl/register.command';
 
@@ -13,22 +13,15 @@ export class RegisterHandler implements ICommandHandler<
   AuthTokenResponse
 > {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly commandBus: CommandBus,
     private readonly tokenService: TokenService,
   ) {}
 
   async execute(command: RegisterCommand): Promise<AuthTokenResponse> {
-    const existing = await this.prisma.user.findUnique({
-      where: { email: command.email },
-    });
-    if (existing) {
-      throw new ConflictException('Email is already registered');
-    }
-
     const passwordHash = await bcrypt.hash(command.password, SALT_ROUNDS);
-    const user = await this.prisma.user.create({
-      data: { email: command.email, passwordHash },
-    });
+    const user = await this.commandBus.execute<CreateUserCommand, User>(
+      new CreateUserCommand(command.email, passwordHash),
+    );
 
     return this.tokenService.issue(user.id, user.email);
   }
