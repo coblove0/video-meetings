@@ -26,3 +26,23 @@ a {
   color: inherit;
   text-decoration: none;
 }
+
+/*
+ * HeroUI v3's default button heights (sm: 32px, md: 36px, lg: 40px) fall
+ * short of the 44px minimum touch target (WCAG 2.5.5, Apple HIG, Material
+ * Design). Raise all sizes to the minimum app-wide rather than patching
+ * individual pages.
+ */
+@layer components {
+  .button--sm,
+  .button--md,
+  .button--lg {
+    min-height: 2.75rem;
+  }
+
+  .button--icon-only.button--sm,
+  .button--icon-only.button--md {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+}

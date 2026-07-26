@@ -46,6 +46,7 @@ Copy `apps/web/.env.local.example` to `apps/web/.env.local` (gitignored) if you 
 - HeroUI v3 needs **no provider** — don't wrap the tree in `HeroUIProvider`. Components use compound composition (e.g. `Card.Header`), not flat props, and `onPress` instead of `onClick`.
 - Theming is CSS-variable/`oklch`-based; light/dark is driven by a `data-theme` attribute (no theme toggle wired up yet, so the app currently renders in light mode only).
 - Before adding or changing components, fetch current docs with the project-local skill scripts in `.agents/skills/heroui-react/scripts/` (e.g. `node .agents/skills/heroui-react/scripts/get_component_docs.mjs Button`) rather than relying on prior knowledge — the API differs from HeroUI v2.
+- `globals.css` overrides HeroUI's default `Button` heights (`.button--sm`/`--md`/`--lg`, measured at 32/36/40px) up to a 44px (`2.75rem`) minimum, and icon-only buttons (`.button--icon-only.button--sm/--md`) to a 44×44px square, to meet the WCAG/HIG/Material minimum touch target size. This is an app-wide `@layer components` override, not a per-page fix — don't reintroduce per-component `min-h-11`/`size-11` classNames for this same purpose.
 
 ## Testing UI changes
 
