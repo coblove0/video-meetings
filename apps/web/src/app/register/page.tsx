@@ -71,18 +71,25 @@ export default function RegisterPage() {
 
   return (
     <main
-      className="flex min-h-screen w-full items-center justify-center px-4 py-12"
+      className="flex min-h-dvh w-full items-center justify-center overflow-y-auto px-4 py-6 sm:py-10"
       style={{
         background:
           'radial-gradient(ellipse 80% 60% at 50% -10%, var(--accent-soft), transparent), var(--background)',
       }}
     >
-      <div className="flex w-full max-w-md flex-col items-center gap-6">
-        <div className="flex flex-col items-center gap-2 text-center">
-          <div className="bg-accent text-accent-foreground flex size-12 items-center justify-center rounded-2xl text-xl font-semibold shadow-lg">
-            V
+      <div className="flex w-full max-w-md flex-col items-center gap-3 sm:gap-6">
+        <div className="hidden flex-col items-center gap-2 text-center [@media(min-height:700px)]:flex">
+          <div className="bg-accent text-accent-foreground flex size-10 items-center justify-center rounded-2xl shadow-lg sm:size-12">
+            <svg
+              aria-hidden="true"
+              className="size-5 sm:size-6"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path d="M3 7a3 3 0 0 1 3-3h7a3 3 0 0 1 3 3v1.382l3.106-1.553A1 1 0 0 1 21 7.723v8.554a1 1 0 0 1-1.447.894L16 15.618V17a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V7Z" />
+            </svg>
           </div>
-          <h1 className="text-foreground text-2xl font-semibold tracking-tight">
+          <h1 className="text-foreground text-xl font-semibold tracking-tight sm:text-2xl">
             Video Meetings
           </h1>
         </div>
@@ -96,7 +103,7 @@ export default function RegisterPage() {
           </Card.Header>
 
           <Form validationErrors={fieldErrors} onSubmit={onSubmit}>
-            <Card.Content className="flex flex-col gap-4">
+            <Card.Content className="flex flex-col gap-3 sm:gap-4">
               {formError ? (
                 <Alert status="danger">
                   <Alert.Indicator />
@@ -159,7 +166,7 @@ export default function RegisterPage() {
               </TextField>
             </Card.Content>
 
-            <Card.Footer className="mt-2 flex flex-col gap-3">
+            <Card.Footer className="mt-1 flex flex-col gap-3 sm:mt-2">
               <Button className="w-full" isPending={isSubmitting} type="submit">
                 {({ isPending }) => (
                   <>
