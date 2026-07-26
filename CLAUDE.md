@@ -20,6 +20,7 @@ Run from the repo root:
 ```bash
 npm install              # install deps for both workspaces
 
+npm run dev                # runs dev:web and dev:api together (via concurrently)
 npm run dev:web           # Next.js dev server — http://localhost:3000
 npm run dev:api           # NestJS dev server with watch — http://localhost:4000
 

@@ -6,6 +6,7 @@
     "apps/*"
   ],
   "scripts": {
+    "dev": "concurrently -n web,api -c blue,green \"npm run dev:web\" \"npm run dev:api\"",
     "dev:web": "npm run dev -w web",
     "dev:api": "npm run start:dev -w api",
     "build": "npm run build --workspaces --if-present",
@@ -19,6 +20,7 @@
     "test:api": "npm run test -w api"
   },
   "devDependencies": {
+    "concurrently": "^10.0.4",
     "prettier": "^3.4.2"
   },
   "allowScripts": {
