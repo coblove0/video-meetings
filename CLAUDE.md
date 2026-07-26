@@ -36,6 +36,7 @@ npm run build:web
 npm run build:api
 
 npm run test:api             # jest unit tests for apps/api
+npm run test                 # runs test:all in every workspace that has one (currently only apps/api: unit + e2e)
 ```
 
 To run a single Nest test file or filter by name, use `-w api` to target the workspace and pass jest args through:

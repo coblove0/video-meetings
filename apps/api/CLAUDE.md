@@ -17,7 +17,9 @@ npm run lint:api         # eslint --fix
 npm run test:api         # jest unit tests
 ```
 
-Equivalent raw scripts inside `apps/api/package.json`: `start`, `start:dev`, `start:debug`, `start:prod`, `build`, `lint`, `format`, `test`, `test:watch`, `test:cov`, `test:debug`, `test:e2e`, `prisma:generate`, `prisma:migrate`, `prisma:studio`.
+Equivalent raw scripts inside `apps/api/package.json`: `start`, `start:dev`, `start:debug`, `start:prod`, `build`, `lint`, `format`, `test`, `test:watch`, `test:cov`, `test:debug`, `test:e2e`, `test:all`, `prisma:generate`, `prisma:migrate`, `prisma:studio`.
+
+`test:all` (also reachable from the repo root as `npm run test`) chains unit tests then e2e tests (`jest && jest --config ./test/jest-e2e.json`) — the e2e half needs your local Postgres server running with migrations applied (see § Environment).
 
 To run a single test or filter by name, pass jest args through the workspace script:
 
