@@ -50,21 +50,11 @@ There is no test runner configured for `apps/web` yet.
 
 ## Database
 
-Postgres 17 runs via `docker-compose.yml` at the repo root (service `postgres`, container `video-meetings-postgres`):
-
-```bash
-docker compose up -d      # start Postgres in the background
-docker compose down       # stop it (add -v to also drop the data volume)
-docker compose ps         # check status/health
-```
-
-Connection defaults (overridable via a root `.env` file — see `.env.example`): user `postgres`, password `postgres`, database `video_meetings`, exposed on `localhost:5432`. Data persists in the `postgres_data` named volume.
-
-`apps/api` connects to this database via Prisma (`@prisma/client` with the `@prisma/adapter-pg` driver adapter). Its connection string and other secrets live in `apps/api/.env` (copy from `apps/api/.env.example`), not the root `.env` — see `apps/api/CLAUDE.md` § Environment and § Architecture for the Prisma setup, schema location, and why the generated client isn't imported from `@prisma/client` directly.
+There is no bundled Postgres in this repo — no `docker-compose.yml`. You're expected to have your own local Postgres 17 (or compatible) server already running on the machine, with a `video_meetings` database created. Point `apps/api` at it via `DATABASE_URL` in `apps/api/.env` (copy from `apps/api/.env.example`), not a root `.env` — see `apps/api/CLAUDE.md` § Environment and § Architecture for the Prisma setup, schema location, and why the generated client isn't imported from `@prisma/client` directly.
 
 ## Ports
 
-`apps/api` listens on port 4000 by default (`PORT` env var overrides it) — deliberately not 3000, since Next.js dev server owns 3000. Keep this separation if either default ever changes. Postgres listens on 5432 by default (`POSTGRES_PORT` env var overrides it).
+`apps/api` listens on port 4000 by default (`PORT` env var overrides it) — deliberately not 3000, since Next.js dev server owns 3000. Keep this separation if either default ever changes. Postgres is expected on the standard port 5432 (set via `DATABASE_URL` in `apps/api/.env`).
 
 ## Keeping documentation in sync
 
