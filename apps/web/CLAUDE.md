@@ -42,6 +42,14 @@ Copy `apps/web/.env.local.example` to `apps/web/.env.local` (gitignored) if you 
 - Theming is CSS-variable/`oklch`-based; light/dark is driven by a `data-theme` attribute (no theme toggle wired up yet, so the app currently renders in light mode only).
 - Before adding or changing components, fetch current docs with the project-local skill scripts in `.agents/skills/heroui-react/scripts/` (e.g. `node .agents/skills/heroui-react/scripts/get_component_docs.mjs Button`) rather than relying on prior knowledge — the API differs from HeroUI v2.
 
+## Testing UI changes
+
+Whenever you make any UI change in this app, you **must**:
+
+- Visually verify the change in a real browser using the `playwright` MCP tools (`mcp__playwright__browser_navigate`, `browser_snapshot`, `browser_take_screenshot`, etc.) — don't consider a UI change done from code/types alone.
+- Review the change against the `ui-ux-pro-max` skill (styles, color, typography, layout, accessibility) before calling it finished.
+- **Do not start the dev server yourself** — `npm run dev:web` is always already running at `http://localhost:3000`. Just navigate to it with Playwright.
+
 ## Keeping documentation in sync
 
 When you add a route, dependency, config, or otherwise change this app's architecture, update this file in the same change — don't leave it describing a stale structure.
