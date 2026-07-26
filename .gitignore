@@ -7,6 +7,7 @@ apps/web/out/
 
 # nest.js
 apps/api/dist/
+apps/api/src/generated/
 
 # testing
 coverage/
