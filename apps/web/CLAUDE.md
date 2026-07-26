@@ -25,7 +25,14 @@ Equivalent raw scripts inside `apps/web/package.json`: `dev`, `build`, `start`, 
 - App Router under `src/app`, TypeScript path alias `@/*` → `src/*` (see `tsconfig.json`).
 - `next.config.ts` is currently empty (no custom config).
 - No test runner is configured yet.
-- Currently just the scaffolded starter (`src/app/page.tsx`, `layout.tsx`) — no real routes, data fetching, or state management have been introduced yet.
+- `src/app/page.tsx` is still the scaffolded starter — no home/dashboard route has been built yet.
+- `src/app/register/page.tsx` — client component (`'use client'`) rendering a registration form (email + password + confirm password) built with HeroUI's `Form`/`TextField`/`Card`/`Alert`. Submits directly to the API's `POST /auth/register` (see `apps/api/CLAUDE.md` § Architecture) via `fetch`, client-validates email format and password length (mirroring the API's `RegisterDto`) before submit, surfaces a 409 (duplicate email) as a field-level error via `Form`'s `validationErrors` prop, and stores the returned `accessToken` in `localStorage` before redirecting to `/`. There is no login page yet.
+
+## Environment
+
+Copy `apps/web/.env.local.example` to `apps/web/.env.local` (gitignored) if you need to override the API URL. Variables:
+
+- `NEXT_PUBLIC_API_URL` — base URL of `apps/api`, used by client components that call the API directly (e.g. `src/app/register/page.tsx`). Defaults to `http://localhost:4000` when unset. Must be `NEXT_PUBLIC_`-prefixed since it's read from client-side code.
 
 ## UI library
 
