@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@heroui/react": "^3.2.2",
@@ -20,6 +21,7 @@
     "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

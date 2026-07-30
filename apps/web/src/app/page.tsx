@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Alert, Button, Card, Spinner } from '@heroui/react';
+import { Alert, Button, Card, Link, Spinner } from '@heroui/react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
@@ -147,9 +147,10 @@ export default function HomePage() {
               </p>
             ) : (
               recentMeetings.map((meeting) => (
-                <div
+                <Link
                   key={meeting.id}
-                  className="border-border flex flex-col gap-1 rounded-xl border p-3"
+                  className="border-border hover:bg-muted-soft flex flex-col gap-1 rounded-xl border p-3 no-underline"
+                  href={`/meetings/${meeting.id}`}
                 >
                   <span className="text-foreground text-sm font-medium">
                     {meeting.title}
@@ -160,7 +161,7 @@ export default function HomePage() {
                       timeStyle: 'short',
                     }).format(new Date(meeting.date))}
                   </span>
-                </div>
+                </Link>
               ))
             )}
           </Card.Content>
