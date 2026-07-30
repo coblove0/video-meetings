@@ -1,18 +1,32 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState, type SVGProps } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useState,
+  type ChangeEvent,
+  type SVGProps,
+} from 'react';
 import {
   Alert,
   AlertDialog,
   Button,
   Card,
+  Input,
   Link,
+  ProgressBar,
   Spinner,
   Table,
 } from '@heroui/react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+
+class UploadHttpError extends Error {
+  constructor(readonly status: number) {
+    super(`Upload failed with status ${status}`);
+  }
+}
 
 interface Meeting {
   id: string;
@@ -83,6 +97,24 @@ function DownloadIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+function UploadIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      viewBox="0 0 24 24"
+      {...props}
+    >
+      <path d="M12 21V9" />
+      <path d="M7 14l5-5 5 5" />
+      <path d="M5 21h14" />
+    </svg>
+  );
+}
+
 function TrashIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg
@@ -119,6 +151,10 @@ export default function MeetingPage() {
   );
   const [deletingFileId, setDeletingFileId] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [fileInputKey, setFileInputKey] = useState(0);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
@@ -259,6 +295,70 @@ export default function MeetingPage() {
     [meetingId, router],
   );
 
+  const handleFileChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      setSelectedFile(event.target.files?.[0] ?? null);
+    },
+    [],
+  );
+
+  const handleUpload = useCallback(async () => {
+    if (!selectedFile) return;
+
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      router.replace('/auth/login');
+      return;
+    }
+
+    setActionError(null);
+    setIsUploading(true);
+    setUploadProgress(0);
+
+    try {
+      const uploadedFile = await new Promise<MeetingFile>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `${API_URL}/meetings/${meetingId}/files`);
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            setUploadProgress(Math.round((event.loaded / event.total) * 100));
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve(JSON.parse(xhr.responseText) as MeetingFile);
+          } else {
+            reject(new UploadHttpError(xhr.status));
+          }
+        };
+        xhr.onerror = () => reject(new UploadHttpError(0));
+
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        xhr.send(formData);
+      });
+
+      setFiles((prev) => [...prev, uploadedFile]);
+      setSelectedFile(null);
+      setFileInputKey((key) => key + 1);
+    } catch (err) {
+      const status = err instanceof UploadHttpError ? err.status : 0;
+      if (status === 413) {
+        setActionError('This file is too large to upload.');
+      } else if (status === 415) {
+        setActionError('This file type is not supported.');
+      } else {
+        setActionError('Could not upload the file. Please try again.');
+      }
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(null);
+    }
+  }, [selectedFile, meetingId, router]);
+
   if (isLoading) {
     return (
       <main className="flex min-h-dvh w-full items-center justify-center">
@@ -322,6 +422,45 @@ export default function MeetingPage() {
                 </Alert.Content>
               </Alert>
             ) : null}
+
+            <Card className="w-full shadow-xl">
+              <Card.Header>
+                <Card.Title>Upload a file</Card.Title>
+              </Card.Header>
+              <Card.Content>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <Input
+                    key={fileInputKey}
+                    aria-label="Choose file to upload"
+                    className="flex-1"
+                    disabled={isUploading}
+                    fullWidth
+                    type="file"
+                    onChange={handleFileChange}
+                  />
+                  <Button
+                    isDisabled={!selectedFile}
+                    isPending={isUploading}
+                    onPress={handleUpload}
+                  >
+                    <UploadIcon aria-hidden="true" className="size-4" />
+                    Upload
+                  </Button>
+                </div>
+                {isUploading && uploadProgress !== null ? (
+                  <ProgressBar
+                    aria-label="Upload progress"
+                    className="mt-3 w-full"
+                    value={uploadProgress}
+                  >
+                    <ProgressBar.Output />
+                    <ProgressBar.Track>
+                      <ProgressBar.Fill />
+                    </ProgressBar.Track>
+                  </ProgressBar>
+                ) : null}
+              </Card.Content>
+            </Card>
 
             <Card className="w-full shadow-xl">
               <Card.Header>
