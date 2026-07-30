@@ -47,7 +47,7 @@ npm run test -w api -- -t "some test name"
 npm run test:e2e -w api
 ```
 
-There is no test runner configured for `apps/web` yet.
+`apps/web` has a Playwright e2e suite: `npm run test:e2e -w web` (see `apps/web/CLAUDE.md` § Testing). It needs `apps/api`'s dev server and a local Postgres running, same as `apps/api`'s own e2e suite.
 
 ## Database
 
