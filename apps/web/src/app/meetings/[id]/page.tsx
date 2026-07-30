@@ -117,6 +117,7 @@ export default function MeetingPage() {
   const [downloadingFileId, setDownloadingFileId] = useState<string | null>(
     null,
   );
+  const [deletingFileId, setDeletingFileId] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
@@ -125,6 +126,8 @@ export default function MeetingPage() {
       router.replace('/auth/login');
       return;
     }
+
+    const controller = new AbortController();
 
     const load = async () => {
       setIsLoading(true);
@@ -135,11 +138,15 @@ export default function MeetingPage() {
         const [meetingResponse, filesResponse] = await Promise.all([
           fetch(`${API_URL}/meetings/${meetingId}`, {
             headers: { Authorization: `Bearer ${token}` },
+            signal: controller.signal,
           }),
           fetch(`${API_URL}/meetings/${meetingId}/files`, {
             headers: { Authorization: `Bearer ${token}` },
+            signal: controller.signal,
           }),
         ]);
+
+        if (controller.signal.aborted) return;
 
         if (meetingResponse.status === 401 || filesResponse.status === 401) {
           localStorage.removeItem('accessToken');
@@ -162,13 +169,16 @@ export default function MeetingPage() {
         setMeeting(meetingData);
         setFiles(filesData);
       } catch {
+        if (controller.signal.aborted) return;
         setError('Unable to reach the server. Please check your connection.');
       } finally {
-        setIsLoading(false);
+        if (!controller.signal.aborted) setIsLoading(false);
       }
     };
 
     void load();
+
+    return () => controller.abort();
   }, [meetingId, router, reloadKey]);
 
   const handleDownload = useCallback(
@@ -201,7 +211,9 @@ export default function MeetingPage() {
         document.body.appendChild(link);
         link.click();
         link.remove();
-        URL.revokeObjectURL(url);
+        // Deferred: revoking synchronously can cut off the download in
+        // browsers (Firefox/Safari) that haven't finished reading the blob yet.
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
       } catch {
         setActionError('Unable to reach the server. Please try again.');
       } finally {
@@ -212,7 +224,7 @@ export default function MeetingPage() {
   );
 
   const handleDelete = useCallback(
-    async (file: MeetingFile) => {
+    async (file: MeetingFile, onSettled: () => void) => {
       const token = localStorage.getItem('accessToken');
       if (!token) {
         router.replace('/auth/login');
@@ -220,6 +232,7 @@ export default function MeetingPage() {
       }
 
       setActionError(null);
+      setDeletingFileId(file.id);
 
       try {
         const response = await fetch(
@@ -238,6 +251,9 @@ export default function MeetingPage() {
         setFiles((prev) => prev.filter((item) => item.id !== file.id));
       } catch {
         setActionError('Unable to reach the server. Please try again.');
+      } finally {
+        setDeletingFileId(null);
+        onSettled();
       }
     },
     [meetingId, router],
@@ -375,37 +391,49 @@ export default function MeetingPage() {
                                     <AlertDialog.Backdrop>
                                       <AlertDialog.Container>
                                         <AlertDialog.Dialog className="sm:max-w-[400px]">
-                                          <AlertDialog.CloseTrigger />
-                                          <AlertDialog.Header>
-                                            <AlertDialog.Icon status="danger" />
-                                            <AlertDialog.Heading>
-                                              Delete this file?
-                                            </AlertDialog.Heading>
-                                          </AlertDialog.Header>
-                                          <AlertDialog.Body>
-                                            <p>
-                                              This will permanently delete{' '}
-                                              <strong>
-                                                {file.originalName}
-                                              </strong>
-                                              . This action cannot be undone.
-                                            </p>
-                                          </AlertDialog.Body>
-                                          <AlertDialog.Footer>
-                                            <Button
-                                              slot="close"
-                                              variant="tertiary"
-                                            >
-                                              Cancel
-                                            </Button>
-                                            <Button
-                                              slot="close"
-                                              variant="danger"
-                                              onPress={() => handleDelete(file)}
-                                            >
-                                              Delete
-                                            </Button>
-                                          </AlertDialog.Footer>
+                                          {(renderProps) => (
+                                            <>
+                                              <AlertDialog.CloseTrigger />
+                                              <AlertDialog.Header>
+                                                <AlertDialog.Icon status="danger" />
+                                                <AlertDialog.Heading>
+                                                  Delete this file?
+                                                </AlertDialog.Heading>
+                                              </AlertDialog.Header>
+                                              <AlertDialog.Body>
+                                                <p>
+                                                  This will permanently delete{' '}
+                                                  <strong>
+                                                    {file.originalName}
+                                                  </strong>
+                                                  . This action cannot be
+                                                  undone.
+                                                </p>
+                                              </AlertDialog.Body>
+                                              <AlertDialog.Footer>
+                                                <Button
+                                                  slot="close"
+                                                  variant="tertiary"
+                                                >
+                                                  Cancel
+                                                </Button>
+                                                <Button
+                                                  isPending={
+                                                    deletingFileId === file.id
+                                                  }
+                                                  variant="danger"
+                                                  onPress={() =>
+                                                    handleDelete(
+                                                      file,
+                                                      renderProps.close,
+                                                    )
+                                                  }
+                                                >
+                                                  Delete
+                                                </Button>
+                                              </AlertDialog.Footer>
+                                            </>
+                                          )}
                                         </AlertDialog.Dialog>
                                       </AlertDialog.Container>
                                     </AlertDialog.Backdrop>
