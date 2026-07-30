@@ -12,6 +12,7 @@ apps/api/uploads/
 
 # testing
 coverage/
+test-results/
 
 # env files
 .env

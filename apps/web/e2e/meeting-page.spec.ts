@@ -115,3 +115,86 @@ test.describe('Meeting page', () => {
     ).toBeVisible();
   });
 });
+
+test.describe('Meeting page file upload', () => {
+  test('uploaded file appears without reload, and a second upload keeps the first', async ({
+    page,
+    request,
+  }) => {
+    const owner = await registerUser(request);
+    const meeting = await createMeeting(request, owner.accessToken);
+
+    await loginViaUi(page, owner.email, owner.password);
+    await page.goto(`/meetings/${meeting.id}`);
+
+    await expect(
+      page.getByText('No files have been uploaded to this meeting yet.'),
+    ).toBeVisible();
+
+    // A full page reload gets a fresh JS context, so this marker disappearing
+    // would prove the upload navigated away instead of updating state in place.
+    await page.evaluate(() => {
+      (window as unknown as Record<string, unknown>).__noReloadMarker = true;
+    });
+
+    const firstFileName = `first-${randomUUID()}.txt`;
+    await page.getByLabel('Choose file to upload').setInputFiles({
+      name: firstFileName,
+      mimeType: 'text/plain',
+      buffer: Buffer.from('first file contents', 'utf-8'),
+    });
+    await page.getByRole('button', { name: 'Upload', exact: true }).click();
+
+    await expect(page.getByText(firstFileName)).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => (window as unknown as Record<string, unknown>).__noReloadMarker,
+      ),
+    ).toBe(true);
+
+    const secondFileName = `second-${randomUUID()}.txt`;
+    await page.getByLabel('Choose file to upload').setInputFiles({
+      name: secondFileName,
+      mimeType: 'text/plain',
+      buffer: Buffer.from('second file contents', 'utf-8'),
+    });
+    await page.getByRole('button', { name: 'Upload', exact: true }).click();
+
+    await expect(page.getByText(secondFileName)).toBeVisible();
+    await expect(page.getByText(firstFileName)).toBeVisible();
+  });
+
+  test('disallowed file type shows an error and is not added to the list or backend', async ({
+    page,
+    request,
+  }) => {
+    const owner = await registerUser(request);
+    const meeting = await createMeeting(request, owner.accessToken);
+
+    await loginViaUi(page, owner.email, owner.password);
+    await page.goto(`/meetings/${meeting.id}`);
+
+    const invalidFileName = `invalid-${randomUUID()}.exe`;
+    await page.getByLabel('Choose file to upload').setInputFiles({
+      name: invalidFileName,
+      mimeType: 'application/x-msdownload',
+      buffer: Buffer.from('not a real executable', 'utf-8'),
+    });
+    await page.getByRole('button', { name: 'Upload', exact: true }).click();
+
+    await expect(
+      page.getByText('This file type is not supported.'),
+    ).toBeVisible();
+    await expect(page.getByText(invalidFileName)).not.toBeVisible();
+    await expect(
+      page.getByText('No files have been uploaded to this meeting yet.'),
+    ).toBeVisible();
+
+    const filesResponse = await request.get(
+      `${API_URL}/meetings/${meeting.id}/files`,
+      { headers: { Authorization: `Bearer ${owner.accessToken}` } },
+    );
+    const files = (await filesResponse.json()) as unknown[];
+    expect(files).toHaveLength(0);
+  });
+});
