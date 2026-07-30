@@ -171,4 +171,163 @@ describe('MeetingFiles (e2e)', () => {
       expect(count).toBe(0);
     }, 30000);
   });
+
+  describe('GET /meetings/:id/files', () => {
+    it("lists the owner's files with name, size, MIME type and upload date", async () => {
+      const { accessToken } = await registerUser(app);
+      const meetingId = await createMeeting(app, accessToken);
+
+      const upload = await request(app.getHttpServer())
+        .post(`/meetings/${meetingId}/files`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .attach('file', Buffer.from('%PDF-1.4 test content'), {
+          filename: 'notes.pdf',
+          contentType: 'application/pdf',
+        })
+        .expect(201);
+      createdStoragePaths.push(
+        (upload.body as MeetingFileResponseBody).storagePath,
+      );
+
+      const response = await request(app.getHttpServer())
+        .get(`/meetings/${meetingId}/files`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+
+      const body = response.body as MeetingFileResponseBody[];
+      expect(body).toHaveLength(1);
+      expect(body[0]).toMatchObject({
+        originalName: 'notes.pdf',
+        mimeType: 'application/pdf',
+        size: expect.any(Number) as number,
+      });
+      expect(body[0]).toHaveProperty('createdAt');
+    });
+
+    it('returns 404 for a meeting belonging to another user', async () => {
+      const owner = await registerUser(app);
+      const other = await registerUser(app);
+      const meetingId = await createMeeting(app, owner.accessToken);
+
+      await request(app.getHttpServer())
+        .get(`/meetings/${meetingId}/files`)
+        .set('Authorization', `Bearer ${other.accessToken}`)
+        .expect(404);
+    });
+  });
+
+  describe('GET /meetings/:id/files/:fileId/download', () => {
+    it("streams the owner's file with the correct headers", async () => {
+      const { accessToken } = await registerUser(app);
+      const meetingId = await createMeeting(app, accessToken);
+
+      const upload = await request(app.getHttpServer())
+        .post(`/meetings/${meetingId}/files`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .attach('file', Buffer.from('%PDF-1.4 test content'), {
+          filename: 'notes.pdf',
+          contentType: 'application/pdf',
+        })
+        .expect(201);
+      const fileId = (upload.body as MeetingFileResponseBody).id;
+      createdStoragePaths.push(
+        (upload.body as MeetingFileResponseBody).storagePath,
+      );
+
+      const response = await request(app.getHttpServer())
+        .get(`/meetings/${meetingId}/files/${fileId}/download`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+
+      expect(response.headers['content-type']).toContain('application/pdf');
+      expect(response.headers['content-disposition']).toContain('notes.pdf');
+      expect(Buffer.from(response.body as Buffer).toString()).toBe(
+        '%PDF-1.4 test content',
+      );
+    });
+
+    it('returns 404 when the file belongs to another user', async () => {
+      const owner = await registerUser(app);
+      const other = await registerUser(app);
+      const meetingId = await createMeeting(app, owner.accessToken);
+
+      const upload = await request(app.getHttpServer())
+        .post(`/meetings/${meetingId}/files`)
+        .set('Authorization', `Bearer ${owner.accessToken}`)
+        .attach('file', Buffer.from('%PDF-1.4 test content'), {
+          filename: 'notes.pdf',
+          contentType: 'application/pdf',
+        })
+        .expect(201);
+      const fileId = (upload.body as MeetingFileResponseBody).id;
+      createdStoragePaths.push(
+        (upload.body as MeetingFileResponseBody).storagePath,
+      );
+
+      await request(app.getHttpServer())
+        .get(`/meetings/${meetingId}/files/${fileId}/download`)
+        .set('Authorization', `Bearer ${other.accessToken}`)
+        .expect(404);
+    });
+  });
+
+  describe('DELETE /meetings/:id/files/:fileId', () => {
+    it("deletes the owner's file record and its content on disk", async () => {
+      const { accessToken } = await registerUser(app);
+      const meetingId = await createMeeting(app, accessToken);
+
+      const upload = await request(app.getHttpServer())
+        .post(`/meetings/${meetingId}/files`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .attach('file', Buffer.from('%PDF-1.4 test content'), {
+          filename: 'notes.pdf',
+          contentType: 'application/pdf',
+        })
+        .expect(201);
+      const { id: fileId, storagePath } =
+        upload.body as MeetingFileResponseBody;
+
+      await request(app.getHttpServer())
+        .delete(`/meetings/${meetingId}/files/${fileId}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(204);
+
+      const prisma = app.get(PrismaService);
+      const stored = await prisma.meetingFile.findUnique({
+        where: { id: fileId },
+      });
+      expect(stored).toBeNull();
+      expect(existsSync(storagePath)).toBe(false);
+    });
+
+    it('returns 404 and leaves the file untouched when it belongs to another user', async () => {
+      const owner = await registerUser(app);
+      const other = await registerUser(app);
+      const meetingId = await createMeeting(app, owner.accessToken);
+
+      const upload = await request(app.getHttpServer())
+        .post(`/meetings/${meetingId}/files`)
+        .set('Authorization', `Bearer ${owner.accessToken}`)
+        .attach('file', Buffer.from('%PDF-1.4 test content'), {
+          filename: 'notes.pdf',
+          contentType: 'application/pdf',
+        })
+        .expect(201);
+      const { id: fileId, storagePath } =
+        upload.body as MeetingFileResponseBody;
+      createdStoragePaths.push(storagePath);
+
+      await request(app.getHttpServer())
+        .delete(`/meetings/${meetingId}/files/${fileId}`)
+        .set('Authorization', `Bearer ${other.accessToken}`)
+        .expect(404);
+
+      const prisma = app.get(PrismaService);
+      const stored = await prisma.meetingFile.findUnique({
+        where: { id: fileId },
+      });
+      expect(stored).not.toBeNull();
+      expect(existsSync(storagePath)).toBe(true);
+    });
+  });
 });
