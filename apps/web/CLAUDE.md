@@ -59,3 +59,7 @@ Whenever you make any UI change in this app, you **must**:
 ## Keeping documentation in sync
 
 When you add a route, dependency, config, or otherwise change this app's architecture, update this file in the same change — don't leave it describing a stale structure.
+
+## meeting-file-upload-storage-and-display
+
+Use this doc for research: @docs/meeting-file-upload-storage-and-display.md
