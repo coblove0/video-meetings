@@ -57,6 +57,19 @@ There is no bundled Postgres in this repo — no `docker-compose.yml`. You're ex
 
 `apps/api` listens on port 4000 by default (`PORT` env var overrides it) — deliberately not 3000, since Next.js dev server owns 3000. Keep this separation if either default ever changes. Postgres is expected on the standard port 5432 (set via `DATABASE_URL` in `apps/api/.env`).
 
+## Test data
+
+The local `video_meetings` database holds nothing but disposable test data — there is no real user data to protect on this machine. One test user must always exist so manual/agent testing has a ready login:
+
+- Email: `test@example.com`
+- Password: `TestPassword123!`
+
+If the password (or any other detail of this user) is changed during testing, update it back and keep this section accurate — this is the single source of truth for the test account, not whatever currently happens to be in the database.
+
+The test user currently owns two seeded meetings ("Sprint Planning", "Design Review"), one of which has a small `agenda.txt` test file attached — recreate similar fixtures if you wipe the database, so there's always at least one meeting with a file to exercise the download/delete paths.
+
+When testing registration or file-upload flows, you will create additional throwaway users/meetings/files beyond this baseline — **clean those up yourself afterward** (delete the rows via Prisma/`prisma:studio`, or via the app's own delete endpoints/UI, and remove any files written under `apps/api/uploads`), leaving only the one persistent test user and its baseline meetings/file behind.
+
 ## Keeping documentation in sync
 
 Whenever a change alters the project's architecture — new module/package, new shared code between `apps/web` and `apps/api`, a changed port or entry point, a new service (database, queue, auth provider), a changed build/test/lint command — update this file and/or the relevant app's `CLAUDE.md` (`apps/web/CLAUDE.md`, `apps/api/CLAUDE.md`) in the same change. Treat outdated docs here as a bug, not a follow-up task.
