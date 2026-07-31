@@ -62,6 +62,6 @@ test.describe('Profile page', () => {
     page,
   }) => {
     await page.goto('/profile');
-    await page.waitForURL('/auth/login');
+    await page.waitForURL('/auth/login', { timeout: 5000 });
   });
 });
