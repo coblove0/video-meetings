@@ -1,13 +1,15 @@
+import { NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { UpdateProfileCommand } from '../impl/update-profile.command';
 import { UpdateProfileHandler } from './update-profile.handler';
 
 describe('UpdateProfileHandler', () => {
   let handler: UpdateProfileHandler;
-  let prisma: { user: { update: jest.Mock } };
+  let prisma: { user: { findUnique: jest.Mock; update: jest.Mock } };
 
   beforeEach(() => {
-    prisma = { user: { update: jest.fn() } };
+    prisma = { user: { findUnique: jest.fn(), update: jest.fn() } };
+    prisma.user.findUnique.mockResolvedValue({ id: 'user-1' });
     handler = new UpdateProfileHandler(prisma as unknown as PrismaService);
   });
 
@@ -82,5 +84,14 @@ describe('UpdateProfileHandler', () => {
     expect(prisma.user.update).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: 'user-2' } }),
     );
+  });
+
+  it('throws 404 and does not attempt an update when the user no longer exists', async () => {
+    prisma.user.findUnique.mockResolvedValue(null);
+
+    const command = new UpdateProfileCommand('user-1', 'Jane Doe');
+
+    await expect(handler.execute(command)).rejects.toThrow(NotFoundException);
+    expect(prisma.user.update).not.toHaveBeenCalled();
   });
 });

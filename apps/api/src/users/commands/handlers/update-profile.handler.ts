@@ -1,3 +1,4 @@
+import { NotFoundException } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { UserProfileResponse } from '../../user-profile.response';
@@ -11,6 +12,13 @@ export class UpdateProfileHandler implements ICommandHandler<
   constructor(private readonly prisma: PrismaService) {}
 
   async execute(command: UpdateProfileCommand): Promise<UserProfileResponse> {
+    const existing = await this.prisma.user.findUnique({
+      where: { id: command.userId },
+    });
+    if (!existing) {
+      throw new NotFoundException('User not found');
+    }
+
     const trimmed = command.name.trim();
     const user = await this.prisma.user.update({
       where: { id: command.userId },
