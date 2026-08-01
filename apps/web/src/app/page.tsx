@@ -67,7 +67,7 @@ export default function HomePage() {
         }
 
         if (!userResponse.ok || !meetingsResponse.ok) {
-          setError('Could not load your meetings.');
+          setError('Could not load your data.');
           return;
         }
 
@@ -117,10 +117,10 @@ export default function HomePage() {
               Welcome back
             </h1>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             {currentUser ? (
               <Link
-                className="flex min-h-11 items-center gap-2 no-underline"
+                className="flex min-h-11 min-w-0 items-center gap-2 no-underline"
                 href="/profile"
               >
                 <Avatar size="sm">
@@ -128,12 +128,16 @@ export default function HomePage() {
                     {getInitials(currentUser.name, currentUser.email)}
                   </Avatar.Fallback>
                 </Avatar>
-                <span className="text-foreground text-sm">
+                <span className="text-foreground max-w-32 truncate text-sm sm:max-w-48">
                   {currentUser.name || currentUser.email}
                 </span>
               </Link>
             ) : null}
-            <Button variant="outline" onPress={handleLogout}>
+            <Button
+              className="shrink-0"
+              variant="outline"
+              onPress={handleLogout}
+            >
               Log out
             </Button>
           </div>
