@@ -1,8 +1,19 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { Alert, Avatar, Button, Card, Spinner } from '@heroui/react';
+import { useEffect, useState, type FormEvent } from 'react';
+import {
+  Alert,
+  Avatar,
+  Button,
+  Card,
+  FieldError,
+  Form,
+  Input,
+  Label,
+  Spinner,
+  TextField,
+} from '@heroui/react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
@@ -32,6 +43,9 @@ export default function ProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [name, setName] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
@@ -62,6 +76,7 @@ export default function ProfilePage() {
 
         const data: UserProfile = await response.json();
         setProfile(data);
+        setName(data.name ?? '');
       } catch {
         setError('Unable to reach the server. Please check your connection.');
       } finally {
@@ -71,6 +86,48 @@ export default function ProfilePage() {
 
     void loadProfile();
   }, [router, reloadKey]);
+
+  const onSaveName = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      router.replace('/auth/login');
+      return;
+    }
+
+    setSaveError(null);
+    setIsSaving(true);
+
+    try {
+      const response = await fetch(`${API_URL}/users/me`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name }),
+      });
+
+      if (response.status === 401) {
+        localStorage.removeItem('accessToken');
+        router.replace('/auth/login');
+        return;
+      }
+
+      if (!response.ok) {
+        setSaveError('Could not save your name.');
+        return;
+      }
+
+      const data: UserProfile = await response.json();
+      setProfile(data);
+      setName(data.name ?? '');
+    } catch {
+      setSaveError('Unable to reach the server. Please check your connection.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -125,14 +182,46 @@ export default function ProfilePage() {
                 <span className="text-foreground text-sm">{profile.email}</span>
               </div>
 
-              <div className="flex w-full flex-col gap-1">
-                <span className="text-muted text-xs font-medium tracking-wide uppercase">
-                  Name
-                </span>
-                <span className="text-foreground text-sm">
-                  {profile.name ?? 'No name set'}
-                </span>
-              </div>
+              <Form className="w-full" onSubmit={onSaveName}>
+                <div className="flex w-full flex-col gap-3">
+                  {saveError ? (
+                    <Alert status="danger">
+                      <Alert.Indicator />
+                      <Alert.Content>
+                        <Alert.Description>{saveError}</Alert.Description>
+                      </Alert.Content>
+                    </Alert>
+                  ) : null}
+
+                  <TextField
+                    maxLength={100}
+                    name="name"
+                    value={name}
+                    onChange={setName}
+                  >
+                    <Label className="text-muted text-xs font-medium tracking-wide uppercase">
+                      Name
+                    </Label>
+                    <Input
+                      className="min-h-11"
+                      placeholder="Add your name"
+                      variant="secondary"
+                    />
+                    <FieldError />
+                  </TextField>
+
+                  <Button className="w-fit" isPending={isSaving} type="submit">
+                    {({ isPending }) => (
+                      <>
+                        {isPending ? (
+                          <Spinner color="current" size="sm" />
+                        ) : null}
+                        {isPending ? 'Saving…' : 'Save'}
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </Form>
             </Card.Content>
           </Card>
         ) : null}
