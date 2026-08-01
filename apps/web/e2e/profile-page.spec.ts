@@ -64,4 +64,113 @@ test.describe('Profile page', () => {
     await page.goto('/profile');
     await page.waitForURL('/auth/login', { timeout: 5000 });
   });
+
+  test('clears an invalid token and redirects to /auth/login on load', async ({
+    page,
+  }) => {
+    await page.addInitScript(
+      (token) => localStorage.setItem('accessToken', token),
+      'this-is-not-a-valid-jwt',
+    );
+
+    await page.goto('/profile');
+    await page.waitForURL('/auth/login', { timeout: 5000 });
+
+    const token = await page.evaluate(() =>
+      localStorage.getItem('accessToken'),
+    );
+    expect(token).toBeNull();
+  });
+
+  test('shows a retryable alert when the profile fails to load', async ({
+    page,
+    request,
+  }) => {
+    const user = await registerUser(request);
+    await page.addInitScript(
+      (token) => localStorage.setItem('accessToken', token),
+      user.accessToken,
+    );
+
+    let shouldFail = true;
+    await page.route(`${API_URL}/users/me`, async (route) => {
+      if (route.request().method() === 'GET' && shouldFail) {
+        await route.fulfill({
+          status: 500,
+          contentType: 'application/json',
+          body: JSON.stringify({ message: 'boom' }),
+        });
+        return;
+      }
+      await route.continue();
+    });
+
+    await page.goto('/profile');
+    await expect(page.getByText('Could not load your profile.')).toBeVisible();
+
+    shouldFail = false;
+    await page.getByRole('button', { name: 'Retry' }).click();
+
+    await expect(page.getByText(user.email)).toBeVisible();
+  });
+
+  test('shows an inline alert when saving the name fails, without clearing the field', async ({
+    page,
+    request,
+  }) => {
+    const user = await registerUser(request);
+    await loginViaUi(page, user.email, user.password);
+    await page.goto('/profile');
+
+    await page.route(`${API_URL}/users/me`, async (route) => {
+      if (route.request().method() === 'PATCH') {
+        await route.fulfill({
+          status: 500,
+          contentType: 'application/json',
+          body: JSON.stringify({ message: 'boom' }),
+        });
+        return;
+      }
+      await route.continue();
+    });
+
+    const nameField = page.getByRole('textbox', { name: 'Name' });
+    const attemptedName = `Should not save ${randomUUID()}`;
+    await nameField.fill(attemptedName);
+    await page.getByRole('button', { name: 'Save' }).click();
+
+    await expect(page.getByText('Could not save your name.')).toBeVisible();
+    await expect(nameField).toHaveValue(attemptedName);
+  });
+
+  test('clears the token and redirects to /auth/login when saving returns 401', async ({
+    page,
+    request,
+  }) => {
+    const user = await registerUser(request);
+    await loginViaUi(page, user.email, user.password);
+    await page.goto('/profile');
+
+    await page.route(`${API_URL}/users/me`, async (route) => {
+      if (route.request().method() === 'PATCH') {
+        await route.fulfill({
+          status: 401,
+          contentType: 'application/json',
+          body: JSON.stringify({ message: 'Unauthorized' }),
+        });
+        return;
+      }
+      await route.continue();
+    });
+
+    await page.getByRole('textbox', { name: 'Name' }).fill('New Name');
+    await page.getByRole('button', { name: 'Save' }).click();
+
+    await page.waitForURL('/auth/login', { timeout: 5000 });
+
+    const token = await page.evaluate(() =>
+      localStorage.getItem('accessToken'),
+    );
+    expect(token).toBeNull();
+  });
 });
