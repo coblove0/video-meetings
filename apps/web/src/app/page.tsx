@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Alert, Button, Card, Link, Spinner } from '@heroui/react';
+import { Alert, Avatar, Button, Card, Link, Spinner } from '@heroui/react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
@@ -13,22 +13,29 @@ interface Meeting {
   participants: string[];
 }
 
-function decodeEmailFromToken(token: string): string | null {
-  try {
-    const payload = token.split('.')[1];
-    const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
-    const { email } = JSON.parse(json) as { email?: string };
-    return email ?? null;
-  } catch {
-    return null;
+interface CurrentUser {
+  email: string;
+  name: string | null;
+}
+
+function getInitials(name: string | null, email: string): string {
+  const trimmedName = name?.trim();
+  if (trimmedName) {
+    const initials = trimmedName
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join('');
+    if (initials) return initials;
   }
+  return email[0]?.toUpperCase() ?? '?';
 }
 
 export default function HomePage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [email, setEmail] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -39,28 +46,34 @@ export default function HomePage() {
       return;
     }
 
-    const loadMeetings = async () => {
-      setEmail(decodeEmailFromToken(token));
+    const loadData = async () => {
       setIsLoading(true);
       setError(null);
 
       try {
-        const response = await fetch(`${API_URL}/meetings`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const [userResponse, meetingsResponse] = await Promise.all([
+          fetch(`${API_URL}/users/me`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch(`${API_URL}/meetings`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
 
-        if (response.status === 401) {
+        if (userResponse.status === 401 || meetingsResponse.status === 401) {
           localStorage.removeItem('accessToken');
           router.replace('/auth/login');
           return;
         }
 
-        if (!response.ok) {
+        if (!userResponse.ok || !meetingsResponse.ok) {
           setError('Could not load your meetings.');
           return;
         }
 
-        const data: Meeting[] = await response.json();
+        const user: CurrentUser = await userResponse.json();
+        const data: Meeting[] = await meetingsResponse.json();
+        setCurrentUser(user);
         setMeetings(data);
       } catch {
         setError('Unable to reach the server. Please check your connection.');
@@ -69,7 +82,7 @@ export default function HomePage() {
       }
     };
 
-    void loadMeetings();
+    void loadData();
   }, [router, reloadKey]);
 
   const handleLogout = () => {
@@ -103,11 +116,27 @@ export default function HomePage() {
             <h1 className="text-foreground text-xl font-semibold tracking-tight sm:text-2xl">
               Welcome back
             </h1>
-            {email ? <p className="text-muted text-sm">{email}</p> : null}
           </div>
-          <Button variant="outline" onPress={handleLogout}>
-            Log out
-          </Button>
+          <div className="flex items-center gap-3">
+            {currentUser ? (
+              <Link
+                className="flex min-h-11 items-center gap-2 no-underline"
+                href="/profile"
+              >
+                <Avatar size="sm">
+                  <Avatar.Fallback>
+                    {getInitials(currentUser.name, currentUser.email)}
+                  </Avatar.Fallback>
+                </Avatar>
+                <span className="text-foreground text-sm">
+                  {currentUser.name || currentUser.email}
+                </span>
+              </Link>
+            ) : null}
+            <Button variant="outline" onPress={handleLogout}>
+              Log out
+            </Button>
+          </div>
         </div>
 
         {error ? (
