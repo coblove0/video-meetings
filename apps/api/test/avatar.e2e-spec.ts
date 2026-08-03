@@ -234,6 +234,26 @@ describe('Avatar (e2e)', () => {
         .expect(404);
     });
 
+    it('returns 404 when the avatar row exists but the file is missing on disk', async () => {
+      const { accessToken } = await registerUser(app);
+
+      await request(app.getHttpServer())
+        .post('/users/me/avatar')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .attach('file', JPEG_MAGIC_BYTES, {
+          filename: 'avatar.jpg',
+          contentType: 'image/jpeg',
+        })
+        .expect(201);
+      const avatarPath = await getAvatarPath(accessToken);
+      rmSync(avatarPath, { force: true });
+
+      await request(app.getHttpServer())
+        .get('/users/me/avatar')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(404);
+    });
+
     it('rejects the request without an access token', async () => {
       await request(app.getHttpServer()).get('/users/me/avatar').expect(401);
     });
