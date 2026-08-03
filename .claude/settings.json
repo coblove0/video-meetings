@@ -1,6 +1,15 @@
 {
   "permissions": {
-    "allow": ["mcp__playwright__*"]
+    "allow": [
+      "mcp__playwright__*",
+      "Edit(*)",
+      "Write(*)",
+      "Bash(npm run test)",
+      "Bash(npm run test:e2e)",
+      "Bash(git *)",
+      "Bash(gh *)",
+      "Bash(npx prisma *)"
+    ]
   },
   "hooks": {
     "Stop": [

@@ -1,7 +1,24 @@
 {
-  "milestone": "",
-  "maxIterations": 1,
-  "maxTurns": 50,
-  "branch": "feature/phase-5",
+  "active": false,
+  "phases": [
+    {
+      "milestone": "Фаза 3: Backend — загрузка и замена аватара",
+      "branch": "feature/phase-7"
+    },
+    {
+      "milestone": "Фаза 4: Frontend — загрузка аватара в UI",
+      "branch": "feature/phase-8"
+    },
+    {
+      "milestone": "Фаза 5: Backend — смена пароля",
+      "branch": "feature/phase-9"
+    },
+    {
+      "milestone": "Фаза 6: Frontend — форма смены пароля",
+      "branch": "feature/phase-10"
+    }
+  ],
+  "maxIterations": 30,
+  "maxTurns": 100,
   "prompt": "Прочитай .claude/ralph.md и следуй правилам оттуда. Возьми следующую открытую Issue из milestone '{milestone}' и реализуй его в '{branch}'"
 }
