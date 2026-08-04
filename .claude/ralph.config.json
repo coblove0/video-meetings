@@ -1,5 +1,5 @@
 {
-  "active": false,
+  "active": true,
   "phases": [
     {
       "milestone": "Фаза 3: Backend — загрузка и замена аватара",
@@ -19,6 +19,6 @@
     }
   ],
   "maxIterations": 30,
-  "maxTurns": 100,
+  "maxTurns": 500,
   "prompt": "Прочитай .claude/ralph.md и следуй правилам оттуда. Возьми следующую открытую Issue из milestone '{milestone}' и реализуй его в '{branch}'"
 }

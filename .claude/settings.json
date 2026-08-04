@@ -8,7 +8,12 @@
       "Bash(npm run test:e2e)",
       "Bash(git *)",
       "Bash(gh *)",
-      "Bash(npx prisma *)"
+      "Bash(npx prisma *)",
+      "PowerShell(npm run test)",
+      "PowerShell(npm run test:e2e)",
+      "PowerShell(git *)",
+      "PowerShell(gh *)",
+      "PowerShell(npx prisma *)"
     ]
   },
   "hooks": {
