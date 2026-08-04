@@ -28,7 +28,7 @@ function runLogged(command, logName) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, {
       shell: true,
-      stdio: ['inherit', 'pipe', 'pipe'],
+      stdio: ['ignore', 'pipe', 'pipe'],
     });
 
     child.stdout.on('data', (chunk) => {
