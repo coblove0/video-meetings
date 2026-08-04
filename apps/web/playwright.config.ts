@@ -17,7 +17,10 @@ export default defineConfig({
   webServer: {
     command: 'npm run dev',
     url: baseURL,
-    reuseExistingServer: !process.env.CI,
+    // Always reuse an already-listening server rather than racing to spawn
+    // a second `npm run dev` tree — under autonomous/CI-less runs (Ralph
+    // loop) a missed race here piles up orphaned Next.js build workers.
+    reuseExistingServer: true,
     timeout: 120_000,
   },
 });
