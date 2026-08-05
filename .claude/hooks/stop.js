@@ -8,6 +8,45 @@ if (!config.active) {
   process.exit(0);
 }
 
+// Stop-хук в settings.json глобальный: он срабатывает на Stop-событие ЛЮБОЙ
+// Claude Code сессии в этом репозитории (не только у ralph-start.js), а с
+// открытыми несколькими терминалами/вкладками несколько сессий могут словить
+// Stop одновременно. Без блокировки каждая из них видела бы active:true и
+// запускала свою параллельную итерацию Ralph (свой claude -p, свои MCP-
+// серверы) — процессы копились бы кратно числу открытых сессий. Файл-лок
+// гарантирует, что реально работает только одна итерация одновременно; все
+// остальные — no-op.
+const lockFile = '.claude/ralph.lock';
+function isPidAlive(pid) {
+  try {
+    return execSync(`tasklist /FI "PID eq ${pid}"`)
+      .toString()
+      .includes(String(pid));
+  } catch {
+    return false;
+  }
+}
+if (fs.existsSync(lockFile)) {
+  const lockedPid = fs.readFileSync(lockFile, 'utf8').trim();
+  if (lockedPid && isPidAlive(lockedPid)) {
+    console.log(
+      `⏭️ Другая итерация Ralph уже выполняется (PID ${lockedPid}) — пропускаем этот Stop-триггер.`,
+    );
+    process.exit(0);
+  }
+  // Лок устарел (процесс мёртв) — можно продолжать, перезапишем ниже.
+}
+fs.writeFileSync(lockFile, String(process.pid));
+process.on('exit', () => {
+  try {
+    if (fs.readFileSync(lockFile, 'utf8').trim() === String(process.pid)) {
+      fs.unlinkSync(lockFile);
+    }
+  } catch {
+    // лок уже убран — не блокер
+  }
+});
+
 // Счётчик итераций и текущая фаза (индекс в config.phases)
 const counterFile = '.claude/ralph.iterations.json';
 let counter = { count: 0, phaseIndex: 0 };
@@ -50,6 +89,51 @@ function runLogged(command, logName) {
       }
     });
   });
+}
+
+// Подчищает осиротевшие воркеры сборки Next.js (apps/web/.next/dev/build/*.js)
+// перед каждой итерацией — если предыдущая итерация уронила dev-сервер (или
+// сама попыталась поднять второй, конкурирующий за порт 3000), его дочерние
+// воркеры остаются висеть в памяти и накапливаются от итерации к итерации.
+function killOrphanedNextWorkers() {
+  try {
+    const procsRaw = execSync(
+      'powershell -NoProfile -Command "Get-CimInstance Win32_Process -Filter \\"Name=\'node.exe\'\\" | Select-Object ProcessId,ParentProcessId,CommandLine | ConvertTo-Json -Compress"',
+    )
+      .toString()
+      .trim();
+    if (!procsRaw) return;
+    let procs = JSON.parse(procsRaw);
+    if (!Array.isArray(procs)) procs = [procs];
+
+    const aliveRaw = execSync(
+      'powershell -NoProfile -Command "Get-Process | Select-Object -ExpandProperty Id"',
+    ).toString();
+    const alivePids = new Set(
+      aliveRaw
+        .split(/\r?\n/)
+        .map((s) => s.trim())
+        .filter(Boolean),
+    );
+
+    for (const p of procs) {
+      const cmd = p.CommandLine || '';
+      if (!cmd.includes('.next') || !cmd.includes('build')) continue;
+      if (alivePids.has(String(p.ParentProcessId))) continue;
+      try {
+        execSync(`taskkill /F /PID ${p.ProcessId}`);
+        console.log(
+          `🧹 Убит осиротевший воркер Next.js (PID ${p.ProcessId}, родитель ${p.ParentProcessId} уже мёртв)`,
+        );
+      } catch {
+        // процесс мог завершиться сам между чтением списка и taskkill — не блокер
+      }
+    }
+  } catch (err) {
+    console.log(
+      `⚠️ Не удалось проверить осиротевшие процессы Next.js: ${err.message}`,
+    );
+  }
 }
 
 function getOpenIssues(milestone) {
@@ -144,6 +228,8 @@ async function finishPhaseAndAdvance(phase) {
 }
 
 async function main() {
+  killOrphanedNextWorkers();
+
   // Общий предохранитель на весь прогон (все фазы вместе), а не на одну фазу
   if (counter.count >= config.maxIterations) {
     console.log(

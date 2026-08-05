@@ -24,6 +24,7 @@ yarn-debug.log*
 yarn-error.log*
 *.log
 .claude/ralph-logs/
+.claude/ralph.lock
 
 # editors / os
 .vscode/*

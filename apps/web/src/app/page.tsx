@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Alert, Avatar, Button, Card, Link, Spinner } from '@heroui/react';
+import { useAvatarUrl } from '@/hooks/use-avatar-url';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
@@ -16,6 +17,7 @@ interface Meeting {
 interface CurrentUser {
   email: string;
   name: string | null;
+  hasAvatar: boolean;
 }
 
 function getInitials(name: string | null, email: string): string {
@@ -38,6 +40,7 @@ export default function HomePage() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [reloadKey, setReloadKey] = useState(0);
+  const avatarUrl = useAvatarUrl(currentUser?.hasAvatar);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
@@ -124,6 +127,9 @@ export default function HomePage() {
                 href="/profile"
               >
                 <Avatar size="sm">
+                  {avatarUrl ? (
+                    <Avatar.Image alt="Your avatar" src={avatarUrl} />
+                  ) : null}
                   <Avatar.Fallback>
                     {getInitials(currentUser.name, currentUser.email)}
                   </Avatar.Fallback>
