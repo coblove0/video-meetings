@@ -135,9 +135,9 @@ export default function ProfilePage() {
     useState(false);
   const [isNewPasswordVisible, setIsNewPasswordVisible] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const [changePasswordError, setChangePasswordError] = useState<
-    string | null
-  >(null);
+  const [changePasswordError, setChangePasswordError] = useState<string | null>(
+    null,
+  );
   const [changePasswordSuccess, setChangePasswordSuccess] = useState(false);
 
   useEffect(() => {
@@ -247,6 +247,17 @@ export default function ProfilePage() {
       if (response.status === 401) {
         localStorage.removeItem('accessToken');
         router.replace('/auth/login');
+        return;
+      }
+
+      if (response.status === 400) {
+        const body: { message?: string | string[] } | null = await response
+          .json()
+          .catch(() => null);
+        const message = Array.isArray(body?.message)
+          ? body.message[0]
+          : body?.message;
+        setChangePasswordError(message ?? 'Could not change your password.');
         return;
       }
 
@@ -518,9 +529,7 @@ export default function ProfilePage() {
                     <Alert status="success">
                       <Alert.Indicator />
                       <Alert.Content>
-                        <Alert.Description>
-                          Password changed.
-                        </Alert.Description>
+                        <Alert.Description>Password changed.</Alert.Description>
                       </Alert.Content>
                     </Alert>
                   ) : null}
