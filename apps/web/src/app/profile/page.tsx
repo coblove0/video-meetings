@@ -17,6 +17,7 @@ import {
   FieldError,
   Form,
   Input,
+  InputGroup,
   Label,
   ProgressBar,
   Spinner,
@@ -52,6 +53,43 @@ function UploadIcon(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+function EyeIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      viewBox="0 0 24 24"
+      {...props}
+    >
+      <path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function EyeOffIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      viewBox="0 0 24 24"
+      {...props}
+    >
+      <path d="M3 3l18 18" />
+      <path d="M10.6 10.6a3 3 0 0 0 4.24 4.24" />
+      <path d="M9.9 5.1A10.9 10.9 0 0 1 12 5c7 0 10.5 7 10.5 7a13.2 13.2 0 0 1-3.15 4.15M6.6 6.6C3.9 8.3 1.5 12 1.5 12s3.5 7 10.5 7a10.6 10.6 0 0 0 4.2-.85" />
+    </svg>
+  );
+}
+
+const NEW_PASSWORD_MIN_LENGTH = 8;
 
 interface UserProfile {
   id: string;
@@ -91,6 +129,16 @@ export default function ProfilePage() {
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [avatarVersion, setAvatarVersion] = useState(0);
   const avatarUrl = useAvatarUrl(profile?.hasAvatar, avatarVersion);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [isCurrentPasswordVisible, setIsCurrentPasswordVisible] =
+    useState(false);
+  const [isNewPasswordVisible, setIsNewPasswordVisible] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [changePasswordError, setChangePasswordError] = useState<string | null>(
+    null,
+  );
+  const [changePasswordSuccess, setChangePasswordSuccess] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
@@ -171,6 +219,62 @@ export default function ProfilePage() {
       setSaveError('Unable to reach the server. Please check your connection.');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const onChangePassword = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      router.replace('/auth/login');
+      return;
+    }
+
+    setChangePasswordError(null);
+    setChangePasswordSuccess(false);
+    setIsChangingPassword(true);
+
+    try {
+      const response = await fetch(`${API_URL}/users/me/password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+
+      if (response.status === 401) {
+        localStorage.removeItem('accessToken');
+        router.replace('/auth/login');
+        return;
+      }
+
+      if (response.status === 400) {
+        const body: { message?: string | string[] } | null = await response
+          .json()
+          .catch(() => null);
+        const message = Array.isArray(body?.message)
+          ? body.message[0]
+          : body?.message;
+        setChangePasswordError(message ?? 'Could not change your password.');
+        return;
+      }
+
+      if (!response.ok) {
+        setChangePasswordError('Could not change your password.');
+        return;
+      }
+
+      setChangePasswordSuccess(true);
+      setCurrentPassword('');
+      setNewPassword('');
+    } catch {
+      setChangePasswordError(
+        'Unable to reach the server. Please check your connection.',
+      );
+    } finally {
+      setIsChangingPassword(false);
     }
   };
 
@@ -403,6 +507,144 @@ export default function ProfilePage() {
                           <Spinner color="current" size="sm" />
                         ) : null}
                         {isPending ? 'Saving…' : 'Save'}
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </Form>
+            </Card.Content>
+          </Card>
+        ) : null}
+
+        {profile ? (
+          <Card className="w-full shadow-xl">
+            <Card.Header>
+              <Card.Title>Change password</Card.Title>
+            </Card.Header>
+
+            <Card.Content>
+              <Form className="w-full" onSubmit={onChangePassword}>
+                <div className="flex w-full flex-col gap-3">
+                  {changePasswordSuccess ? (
+                    <Alert status="success">
+                      <Alert.Indicator />
+                      <Alert.Content>
+                        <Alert.Description>Password changed.</Alert.Description>
+                      </Alert.Content>
+                    </Alert>
+                  ) : null}
+
+                  {changePasswordError ? (
+                    <Alert status="danger">
+                      <Alert.Indicator />
+                      <Alert.Content>
+                        <Alert.Description>
+                          {changePasswordError}
+                        </Alert.Description>
+                      </Alert.Content>
+                    </Alert>
+                  ) : null}
+
+                  <TextField
+                    isRequired
+                    name="currentPassword"
+                    type={isCurrentPasswordVisible ? 'text' : 'password'}
+                    value={currentPassword}
+                    onChange={setCurrentPassword}
+                    validate={(value) =>
+                      value.length === 0
+                        ? 'Please enter your current password'
+                        : null
+                    }
+                  >
+                    <Label>Current password</Label>
+                    <InputGroup className="min-h-11" variant="secondary">
+                      <InputGroup.Input
+                        autoComplete="current-password"
+                        className="min-h-11"
+                        placeholder="••••••••"
+                      />
+                      <InputGroup.Suffix className="pr-1">
+                        <Button
+                          isIconOnly
+                          aria-label={
+                            isCurrentPasswordVisible
+                              ? 'Hide password'
+                              : 'Show password'
+                          }
+                          size="sm"
+                          variant="ghost"
+                          onPress={() =>
+                            setIsCurrentPasswordVisible((visible) => !visible)
+                          }
+                        >
+                          {isCurrentPasswordVisible ? (
+                            <EyeOffIcon aria-hidden="true" className="size-4" />
+                          ) : (
+                            <EyeIcon aria-hidden="true" className="size-4" />
+                          )}
+                        </Button>
+                      </InputGroup.Suffix>
+                    </InputGroup>
+                    <FieldError />
+                  </TextField>
+
+                  <TextField
+                    isRequired
+                    minLength={NEW_PASSWORD_MIN_LENGTH}
+                    name="newPassword"
+                    type={isNewPasswordVisible ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={setNewPassword}
+                    validate={(value) =>
+                      value.length < NEW_PASSWORD_MIN_LENGTH
+                        ? `Password must be at least ${NEW_PASSWORD_MIN_LENGTH} characters`
+                        : null
+                    }
+                  >
+                    <Label>New password</Label>
+                    <InputGroup className="min-h-11" variant="secondary">
+                      <InputGroup.Input
+                        autoComplete="new-password"
+                        className="min-h-11"
+                        placeholder="••••••••"
+                      />
+                      <InputGroup.Suffix className="pr-1">
+                        <Button
+                          isIconOnly
+                          aria-label={
+                            isNewPasswordVisible
+                              ? 'Hide password'
+                              : 'Show password'
+                          }
+                          size="sm"
+                          variant="ghost"
+                          onPress={() =>
+                            setIsNewPasswordVisible((visible) => !visible)
+                          }
+                        >
+                          {isNewPasswordVisible ? (
+                            <EyeOffIcon aria-hidden="true" className="size-4" />
+                          ) : (
+                            <EyeIcon aria-hidden="true" className="size-4" />
+                          )}
+                        </Button>
+                      </InputGroup.Suffix>
+                    </InputGroup>
+                    <FieldError />
+                  </TextField>
+
+                  <Button
+                    className="w-fit"
+                    isPending={isChangingPassword}
+                    type="submit"
+                  >
+                    {({ isPending }) => (
+                      <>
+                        {isPending ? (
+                          <Spinner color="current" size="sm" />
+                        ) : null}
+                        {isPending ? 'Changing…' : 'Change password'}
                       </>
                     )}
                   </Button>
