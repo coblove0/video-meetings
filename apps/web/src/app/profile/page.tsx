@@ -134,6 +134,11 @@ export default function ProfilePage() {
   const [isCurrentPasswordVisible, setIsCurrentPasswordVisible] =
     useState(false);
   const [isNewPasswordVisible, setIsNewPasswordVisible] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [changePasswordError, setChangePasswordError] = useState<
+    string | null
+  >(null);
+  const [changePasswordSuccess, setChangePasswordSuccess] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
@@ -217,8 +222,49 @@ export default function ProfilePage() {
     }
   };
 
-  const onChangePassword = (event: FormEvent<HTMLFormElement>) => {
+  const onChangePassword = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      router.replace('/auth/login');
+      return;
+    }
+
+    setChangePasswordError(null);
+    setChangePasswordSuccess(false);
+    setIsChangingPassword(true);
+
+    try {
+      const response = await fetch(`${API_URL}/users/me/password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+
+      if (response.status === 401) {
+        localStorage.removeItem('accessToken');
+        router.replace('/auth/login');
+        return;
+      }
+
+      if (!response.ok) {
+        setChangePasswordError('Could not change your password.');
+        return;
+      }
+
+      setChangePasswordSuccess(true);
+      setCurrentPassword('');
+      setNewPassword('');
+    } catch {
+      setChangePasswordError(
+        'Unable to reach the server. Please check your connection.',
+      );
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
   const handleAvatarFileChange = useCallback(
@@ -468,6 +514,28 @@ export default function ProfilePage() {
             <Card.Content>
               <Form className="w-full" onSubmit={onChangePassword}>
                 <div className="flex w-full flex-col gap-3">
+                  {changePasswordSuccess ? (
+                    <Alert status="success">
+                      <Alert.Indicator />
+                      <Alert.Content>
+                        <Alert.Description>
+                          Password changed.
+                        </Alert.Description>
+                      </Alert.Content>
+                    </Alert>
+                  ) : null}
+
+                  {changePasswordError ? (
+                    <Alert status="danger">
+                      <Alert.Indicator />
+                      <Alert.Content>
+                        <Alert.Description>
+                          {changePasswordError}
+                        </Alert.Description>
+                      </Alert.Content>
+                    </Alert>
+                  ) : null}
+
                   <TextField
                     isRequired
                     name="currentPassword"
@@ -557,8 +625,19 @@ export default function ProfilePage() {
                     <FieldError />
                   </TextField>
 
-                  <Button className="w-fit" type="submit">
-                    Change password
+                  <Button
+                    className="w-fit"
+                    isPending={isChangingPassword}
+                    type="submit"
+                  >
+                    {({ isPending }) => (
+                      <>
+                        {isPending ? (
+                          <Spinner color="current" size="sm" />
+                        ) : null}
+                        {isPending ? 'Changing…' : 'Change password'}
+                      </>
+                    )}
                   </Button>
                 </div>
               </Form>
