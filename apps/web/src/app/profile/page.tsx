@@ -22,6 +22,7 @@ import {
   Spinner,
   TextField,
 } from '@heroui/react';
+import { useAvatarUrl } from '@/hooks/use-avatar-url';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
@@ -88,8 +89,8 @@ export default function ProfilePage() {
     number | null
   >(null);
   const [avatarError, setAvatarError] = useState<string | null>(null);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarVersion, setAvatarVersion] = useState(0);
+  const avatarUrl = useAvatarUrl(profile?.hasAvatar, avatarVersion);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
@@ -130,41 +131,6 @@ export default function ProfilePage() {
 
     void loadProfile();
   }, [router, reloadKey]);
-
-  useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    let objectUrl: string | null = null;
-    let cancelled = false;
-
-    const loadAvatar = async () => {
-      if (!profile?.hasAvatar || !token) {
-        setAvatarUrl(null);
-        return;
-      }
-
-      try {
-        const response = await fetch(`${API_URL}/users/me/avatar`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!response.ok || cancelled) return;
-
-        const blob = await response.blob();
-        if (cancelled) return;
-
-        objectUrl = URL.createObjectURL(blob);
-        setAvatarUrl(objectUrl);
-      } catch {
-        // Fall back to initials if the avatar can't be fetched.
-      }
-    };
-
-    void loadAvatar();
-
-    return () => {
-      cancelled = true;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-  }, [profile?.hasAvatar, avatarVersion]);
 
   const onSaveName = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -272,8 +238,7 @@ export default function ProfilePage() {
       setAvatarInputKey((key) => key + 1);
       setAvatarVersion((version) => version + 1);
     } catch (err) {
-      const status =
-        err instanceof AvatarUploadHttpError ? err.status : 0;
+      const status = err instanceof AvatarUploadHttpError ? err.status : 0;
       if (status === 401) {
         localStorage.removeItem('accessToken');
         router.replace('/auth/login');

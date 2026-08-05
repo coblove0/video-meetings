@@ -28,21 +28,41 @@ async function loginViaUi(page: Page, email: string, password: string) {
   await page.waitForURL('/');
 }
 
-// Real, decodable JPEG bytes (via the browser's own canvas encoder) rather
-// than a hand-built fixture, so a successful upload can be asserted by
-// naturalWidth instead of just a 2xx response.
-async function generateJpeg(page: Page): Promise<Buffer> {
-  const dataUrl = await page.evaluate(() => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 4;
-    canvas.height = 4;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('2D canvas context unavailable');
-    ctx.fillStyle = '#3366ff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL('image/jpeg', 0.92);
-  });
+// Real, decodable JPEG/PNG bytes (via the browser's own canvas encoder)
+// rather than a hand-built fixture, so a successful upload can be asserted
+// by naturalWidth instead of just a 2xx response.
+async function generateImage(
+  page: Page,
+  mimeType: 'image/jpeg' | 'image/png',
+  fillStyle: string,
+): Promise<Buffer> {
+  const dataUrl = await page.evaluate(
+    ({ mimeType, fillStyle }) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 4;
+      canvas.height = 4;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('2D canvas context unavailable');
+      ctx.fillStyle = fillStyle;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL(mimeType, 0.92);
+    },
+    { mimeType, fillStyle },
+  );
   return Buffer.from(dataUrl.split(',')[1], 'base64');
+}
+
+async function generateJpeg(page: Page): Promise<Buffer> {
+  return generateImage(page, 'image/jpeg', '#3366ff');
+}
+
+async function uploadAvatar(page: Page, file: Buffer, name: string) {
+  await page.getByLabel('Choose avatar to upload').setInputFiles({
+    name,
+    mimeType: name.endsWith('.png') ? 'image/png' : 'image/jpeg',
+    buffer: file,
+  });
+  await page.getByRole('button', { name: 'Upload avatar' }).click();
 }
 
 test.describe('Profile page avatar upload', () => {
@@ -56,13 +76,7 @@ test.describe('Profile page avatar upload', () => {
     await expect(page.getByText(user.email)).toBeVisible();
 
     const jpeg = await generateJpeg(page);
-
-    await page.getByLabel('Choose avatar to upload').setInputFiles({
-      name: 'avatar.jpg',
-      mimeType: 'image/jpeg',
-      buffer: jpeg,
-    });
-    await page.getByRole('button', { name: 'Upload avatar' }).click();
+    await uploadAvatar(page, jpeg, 'avatar.jpg');
 
     const avatarImage = page.getByRole('img', { name: 'Your avatar' });
     await expect(avatarImage).toBeVisible();
@@ -70,7 +84,50 @@ test.describe('Profile page avatar upload', () => {
     // blob URL actually decoded as an image, not just that some src was set.
     await expect
       .poll(() =>
-        avatarImage.evaluate(
+        avatarImage.evaluate((el) => (el as HTMLImageElement).naturalWidth),
+      )
+      .toBeGreaterThan(0);
+  });
+
+  test('replaces an existing avatar with a new upload, in the profile page and the home header, without breaking the display', async ({
+    page,
+    request,
+  }) => {
+    const user = await registerUser(request);
+    await loginViaUi(page, user.email, user.password);
+    await page.goto('/profile');
+    await expect(page.getByText(user.email)).toBeVisible();
+
+    const firstAvatar = await generateImage(page, 'image/jpeg', '#3366ff');
+    await uploadAvatar(page, firstAvatar, 'first.jpg');
+
+    const avatarImage = page.getByRole('img', { name: 'Your avatar' });
+    await expect(avatarImage).toBeVisible();
+    await expect
+      .poll(() =>
+        avatarImage.evaluate((el) => (el as HTMLImageElement).naturalWidth),
+      )
+      .toBeGreaterThan(0);
+
+    const secondAvatar = await generateImage(page, 'image/png', '#ff6633');
+    await uploadAvatar(page, secondAvatar, 'second.png');
+
+    // The replacement must never leave the <img> pointed at an
+    // already-revoked blob URL — it should stay visible and decodable
+    // throughout, not just eventually end up that way.
+    await expect(avatarImage).toBeVisible();
+    await expect
+      .poll(() =>
+        avatarImage.evaluate((el) => (el as HTMLImageElement).naturalWidth),
+      )
+      .toBeGreaterThan(0);
+
+    await page.goto('/');
+    const headerAvatarImage = page.getByRole('img', { name: 'Your avatar' });
+    await expect(headerAvatarImage).toBeVisible();
+    await expect
+      .poll(() =>
+        headerAvatarImage.evaluate(
           (el) => (el as HTMLImageElement).naturalWidth,
         ),
       )
