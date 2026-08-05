@@ -89,6 +89,15 @@ describe('Auth (e2e)', () => {
         .send({ email: 'not-an-email', password })
         .expect(400);
     });
+
+    it('rejects a password longer than 72 characters', async () => {
+      const { email } = uniqueCredentials();
+
+      await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({ email, password: 'a'.repeat(73) })
+        .expect(400);
+    });
   });
 
   describe('POST /auth/login', () => {

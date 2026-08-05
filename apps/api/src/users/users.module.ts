@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { AuthModule } from '../auth/auth.module';
+import { ChangePasswordHandler } from './commands/handlers/change-password.handler';
 import { CreateUserHandler } from './commands/handlers/create-user.handler';
 import { UpdateProfileHandler } from './commands/handlers/update-profile.handler';
 import { UploadAvatarHandler } from './commands/handlers/upload-avatar.handler';
@@ -13,6 +14,7 @@ const CommandHandlers = [
   CreateUserHandler,
   UpdateProfileHandler,
   UploadAvatarHandler,
+  ChangePasswordHandler,
 ];
 const QueryHandlers = [
   FindUserByEmailHandler,

@@ -22,8 +22,10 @@ import type { AuthenticatedUser } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { AvatarFile } from './avatar-file.response';
 import { avatarMulterOptions } from './avatar-multer.config';
+import { ChangePasswordCommand } from './commands/impl/change-password.command';
 import { UpdateProfileCommand } from './commands/impl/update-profile.command';
 import { UploadAvatarCommand } from './commands/impl/upload-avatar.command';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { GetAvatarQuery } from './queries/impl/get-avatar.query';
 import { GetCurrentUserQuery } from './queries/impl/get-current-user.query';
@@ -51,6 +53,20 @@ export class UsersController {
   ): Promise<UserProfileResponse> {
     return this.commandBus.execute(
       new UpdateProfileCommand(user.userId, dto.name),
+    );
+  }
+
+  @Post('me/password')
+  changePassword(
+    @Body() dto: ChangePasswordDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<void> {
+    return this.commandBus.execute(
+      new ChangePasswordCommand(
+        user.userId,
+        dto.currentPassword,
+        dto.newPassword,
+      ),
     );
   }
 
