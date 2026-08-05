@@ -16,6 +16,7 @@ interface Meeting {
 interface CurrentUser {
   email: string;
   name: string | null;
+  hasAvatar: boolean;
 }
 
 function getInitials(name: string | null, email: string): string {
@@ -38,6 +39,7 @@ export default function HomePage() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [reloadKey, setReloadKey] = useState(0);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
@@ -85,6 +87,41 @@ export default function HomePage() {
     void loadData();
   }, [router, reloadKey]);
 
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken');
+    let objectUrl: string | null = null;
+    let cancelled = false;
+
+    const loadAvatar = async () => {
+      if (!currentUser?.hasAvatar || !token) {
+        setAvatarUrl(null);
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/users/me/avatar`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!response.ok || cancelled) return;
+
+        const blob = await response.blob();
+        if (cancelled) return;
+
+        objectUrl = URL.createObjectURL(blob);
+        setAvatarUrl(objectUrl);
+      } catch {
+        // Fall back to initials if the avatar can't be fetched.
+      }
+    };
+
+    void loadAvatar();
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [currentUser?.hasAvatar]);
+
   const handleLogout = () => {
     localStorage.removeItem('accessToken');
     router.replace('/auth/login');
@@ -124,6 +161,9 @@ export default function HomePage() {
                 href="/profile"
               >
                 <Avatar size="sm">
+                  {avatarUrl ? (
+                    <Avatar.Image alt="Your avatar" src={avatarUrl} />
+                  ) : null}
                   <Avatar.Fallback>
                     {getInitials(currentUser.name, currentUser.email)}
                   </Avatar.Fallback>
