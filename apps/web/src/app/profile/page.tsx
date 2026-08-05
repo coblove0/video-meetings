@@ -17,6 +17,7 @@ import {
   FieldError,
   Form,
   Input,
+  InputGroup,
   Label,
   ProgressBar,
   Spinner,
@@ -52,6 +53,43 @@ function UploadIcon(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+function EyeIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      viewBox="0 0 24 24"
+      {...props}
+    >
+      <path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function EyeOffIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      viewBox="0 0 24 24"
+      {...props}
+    >
+      <path d="M3 3l18 18" />
+      <path d="M10.6 10.6a3 3 0 0 0 4.24 4.24" />
+      <path d="M9.9 5.1A10.9 10.9 0 0 1 12 5c7 0 10.5 7 10.5 7a13.2 13.2 0 0 1-3.15 4.15M6.6 6.6C3.9 8.3 1.5 12 1.5 12s3.5 7 10.5 7a10.6 10.6 0 0 0 4.2-.85" />
+    </svg>
+  );
+}
+
+const NEW_PASSWORD_MIN_LENGTH = 8;
 
 interface UserProfile {
   id: string;
@@ -91,6 +129,11 @@ export default function ProfilePage() {
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [avatarVersion, setAvatarVersion] = useState(0);
   const avatarUrl = useAvatarUrl(profile?.hasAvatar, avatarVersion);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [isCurrentPasswordVisible, setIsCurrentPasswordVisible] =
+    useState(false);
+  const [isNewPasswordVisible, setIsNewPasswordVisible] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
@@ -172,6 +215,10 @@ export default function ProfilePage() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const onChangePassword = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
   };
 
   const handleAvatarFileChange = useCallback(
@@ -409,6 +456,112 @@ export default function ProfilePage() {
                 </div>
               </Form>
             </Card.Content>
+          </Card>
+        ) : null}
+
+        {profile ? (
+          <Card className="w-full shadow-xl">
+            <Card.Header>
+              <Card.Title>Change password</Card.Title>
+            </Card.Header>
+
+            <Form onSubmit={onChangePassword}>
+              <Card.Content className="flex flex-col gap-3 sm:gap-4">
+                <TextField
+                  isRequired
+                  name="currentPassword"
+                  type={isCurrentPasswordVisible ? 'text' : 'password'}
+                  value={currentPassword}
+                  onChange={setCurrentPassword}
+                  validate={(value) =>
+                    value.length === 0
+                      ? 'Please enter your current password'
+                      : null
+                  }
+                >
+                  <Label>Current password</Label>
+                  <InputGroup className="min-h-11" variant="secondary">
+                    <InputGroup.Input
+                      autoComplete="current-password"
+                      className="min-h-11"
+                      placeholder="••••••••"
+                    />
+                    <InputGroup.Suffix className="pr-1">
+                      <Button
+                        isIconOnly
+                        aria-label={
+                          isCurrentPasswordVisible
+                            ? 'Hide password'
+                            : 'Show password'
+                        }
+                        size="sm"
+                        variant="ghost"
+                        onPress={() =>
+                          setIsCurrentPasswordVisible((visible) => !visible)
+                        }
+                      >
+                        {isCurrentPasswordVisible ? (
+                          <EyeOffIcon aria-hidden="true" className="size-4" />
+                        ) : (
+                          <EyeIcon aria-hidden="true" className="size-4" />
+                        )}
+                      </Button>
+                    </InputGroup.Suffix>
+                  </InputGroup>
+                  <FieldError />
+                </TextField>
+
+                <TextField
+                  isRequired
+                  name="newPassword"
+                  type={isNewPasswordVisible ? 'text' : 'password'}
+                  value={newPassword}
+                  onChange={setNewPassword}
+                  validate={(value) =>
+                    value.length < NEW_PASSWORD_MIN_LENGTH
+                      ? `Password must be at least ${NEW_PASSWORD_MIN_LENGTH} characters`
+                      : null
+                  }
+                >
+                  <Label>New password</Label>
+                  <InputGroup className="min-h-11" variant="secondary">
+                    <InputGroup.Input
+                      autoComplete="new-password"
+                      className="min-h-11"
+                      placeholder="••••••••"
+                    />
+                    <InputGroup.Suffix className="pr-1">
+                      <Button
+                        isIconOnly
+                        aria-label={
+                          isNewPasswordVisible
+                            ? 'Hide password'
+                            : 'Show password'
+                        }
+                        size="sm"
+                        variant="ghost"
+                        onPress={() =>
+                          setIsNewPasswordVisible((visible) => !visible)
+                        }
+                      >
+                        {isNewPasswordVisible ? (
+                          <EyeOffIcon aria-hidden="true" className="size-4" />
+                        ) : (
+                          <EyeIcon aria-hidden="true" className="size-4" />
+                        )}
+                      </Button>
+                    </InputGroup.Suffix>
+                  </InputGroup>
+                  <FieldError />
+                </TextField>
+              </Card.Content>
+
+              <Card.Footer>
+                <Button className="w-fit" type="submit">
+                  Change password
+                </Button>
+              </Card.Footer>
+            </Form>
           </Card>
         ) : null}
       </div>
