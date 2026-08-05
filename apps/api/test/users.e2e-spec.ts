@@ -187,5 +187,59 @@ describe('Users (e2e)', () => {
         .send({ currentPassword: 'whatever', newPassword: 'N3wSecret!' })
         .expect(401);
     });
+
+    it('rejects a new password shorter than 8 characters', async () => {
+      const { accessToken, email, password } = await registerUser(app);
+
+      await request(app.getHttpServer())
+        .post('/users/me/password')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ currentPassword: password, newPassword: 'Sh0rt!' })
+        .expect(400);
+
+      await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email, password })
+        .expect(200);
+    });
+
+    it('rejects a new password longer than 72 characters', async () => {
+      const { accessToken, email, password } = await registerUser(app);
+
+      await request(app.getHttpServer())
+        .post('/users/me/password')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ currentPassword: password, newPassword: 'a'.repeat(73) })
+        .expect(400);
+
+      await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email, password })
+        .expect(200);
+    });
+
+    it('rejects a body missing currentPassword', async () => {
+      const { accessToken } = await registerUser(app);
+
+      await request(app.getHttpServer())
+        .post('/users/me/password')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ newPassword: 'N3wSecret!' })
+        .expect(400);
+    });
+
+    it('rejects a body containing an unknown field', async () => {
+      const { accessToken, password } = await registerUser(app);
+
+      await request(app.getHttpServer())
+        .post('/users/me/password')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          currentPassword: password,
+          newPassword: 'N3wSecret!',
+          isAdmin: true,
+        })
+        .expect(400);
+    });
   });
 });
