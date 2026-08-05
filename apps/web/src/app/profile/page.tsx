@@ -465,103 +465,104 @@ export default function ProfilePage() {
               <Card.Title>Change password</Card.Title>
             </Card.Header>
 
-            <Form onSubmit={onChangePassword}>
-              <Card.Content className="flex flex-col gap-3 sm:gap-4">
-                <TextField
-                  isRequired
-                  name="currentPassword"
-                  type={isCurrentPasswordVisible ? 'text' : 'password'}
-                  value={currentPassword}
-                  onChange={setCurrentPassword}
-                  validate={(value) =>
-                    value.length === 0
-                      ? 'Please enter your current password'
-                      : null
-                  }
-                >
-                  <Label>Current password</Label>
-                  <InputGroup className="min-h-11" variant="secondary">
-                    <InputGroup.Input
-                      autoComplete="current-password"
-                      className="min-h-11"
-                      placeholder="••••••••"
-                    />
-                    <InputGroup.Suffix className="pr-1">
-                      <Button
-                        isIconOnly
-                        aria-label={
-                          isCurrentPasswordVisible
-                            ? 'Hide password'
-                            : 'Show password'
-                        }
-                        size="sm"
-                        variant="ghost"
-                        onPress={() =>
-                          setIsCurrentPasswordVisible((visible) => !visible)
-                        }
-                      >
-                        {isCurrentPasswordVisible ? (
-                          <EyeOffIcon aria-hidden="true" className="size-4" />
-                        ) : (
-                          <EyeIcon aria-hidden="true" className="size-4" />
-                        )}
-                      </Button>
-                    </InputGroup.Suffix>
-                  </InputGroup>
-                  <FieldError />
-                </TextField>
+            <Card.Content>
+              <Form className="w-full" onSubmit={onChangePassword}>
+                <div className="flex w-full flex-col gap-3">
+                  <TextField
+                    isRequired
+                    name="currentPassword"
+                    type={isCurrentPasswordVisible ? 'text' : 'password'}
+                    value={currentPassword}
+                    onChange={setCurrentPassword}
+                    validate={(value) =>
+                      value.length === 0
+                        ? 'Please enter your current password'
+                        : null
+                    }
+                  >
+                    <Label>Current password</Label>
+                    <InputGroup className="min-h-11" variant="secondary">
+                      <InputGroup.Input
+                        autoComplete="current-password"
+                        className="min-h-11"
+                        placeholder="••••••••"
+                      />
+                      <InputGroup.Suffix className="pr-1">
+                        <Button
+                          isIconOnly
+                          aria-label={
+                            isCurrentPasswordVisible
+                              ? 'Hide password'
+                              : 'Show password'
+                          }
+                          size="sm"
+                          variant="ghost"
+                          onPress={() =>
+                            setIsCurrentPasswordVisible((visible) => !visible)
+                          }
+                        >
+                          {isCurrentPasswordVisible ? (
+                            <EyeOffIcon aria-hidden="true" className="size-4" />
+                          ) : (
+                            <EyeIcon aria-hidden="true" className="size-4" />
+                          )}
+                        </Button>
+                      </InputGroup.Suffix>
+                    </InputGroup>
+                    <FieldError />
+                  </TextField>
 
-                <TextField
-                  isRequired
-                  name="newPassword"
-                  type={isNewPasswordVisible ? 'text' : 'password'}
-                  value={newPassword}
-                  onChange={setNewPassword}
-                  validate={(value) =>
-                    value.length < NEW_PASSWORD_MIN_LENGTH
-                      ? `Password must be at least ${NEW_PASSWORD_MIN_LENGTH} characters`
-                      : null
-                  }
-                >
-                  <Label>New password</Label>
-                  <InputGroup className="min-h-11" variant="secondary">
-                    <InputGroup.Input
-                      autoComplete="new-password"
-                      className="min-h-11"
-                      placeholder="••••••••"
-                    />
-                    <InputGroup.Suffix className="pr-1">
-                      <Button
-                        isIconOnly
-                        aria-label={
-                          isNewPasswordVisible
-                            ? 'Hide password'
-                            : 'Show password'
-                        }
-                        size="sm"
-                        variant="ghost"
-                        onPress={() =>
-                          setIsNewPasswordVisible((visible) => !visible)
-                        }
-                      >
-                        {isNewPasswordVisible ? (
-                          <EyeOffIcon aria-hidden="true" className="size-4" />
-                        ) : (
-                          <EyeIcon aria-hidden="true" className="size-4" />
-                        )}
-                      </Button>
-                    </InputGroup.Suffix>
-                  </InputGroup>
-                  <FieldError />
-                </TextField>
-              </Card.Content>
+                  <TextField
+                    isRequired
+                    minLength={NEW_PASSWORD_MIN_LENGTH}
+                    name="newPassword"
+                    type={isNewPasswordVisible ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={setNewPassword}
+                    validate={(value) =>
+                      value.length < NEW_PASSWORD_MIN_LENGTH
+                        ? `Password must be at least ${NEW_PASSWORD_MIN_LENGTH} characters`
+                        : null
+                    }
+                  >
+                    <Label>New password</Label>
+                    <InputGroup className="min-h-11" variant="secondary">
+                      <InputGroup.Input
+                        autoComplete="new-password"
+                        className="min-h-11"
+                        placeholder="••••••••"
+                      />
+                      <InputGroup.Suffix className="pr-1">
+                        <Button
+                          isIconOnly
+                          aria-label={
+                            isNewPasswordVisible
+                              ? 'Hide password'
+                              : 'Show password'
+                          }
+                          size="sm"
+                          variant="ghost"
+                          onPress={() =>
+                            setIsNewPasswordVisible((visible) => !visible)
+                          }
+                        >
+                          {isNewPasswordVisible ? (
+                            <EyeOffIcon aria-hidden="true" className="size-4" />
+                          ) : (
+                            <EyeIcon aria-hidden="true" className="size-4" />
+                          )}
+                        </Button>
+                      </InputGroup.Suffix>
+                    </InputGroup>
+                    <FieldError />
+                  </TextField>
 
-              <Card.Footer>
-                <Button className="w-fit" type="submit">
-                  Change password
-                </Button>
-              </Card.Footer>
-            </Form>
+                  <Button className="w-fit" type="submit">
+                    Change password
+                  </Button>
+                </div>
+              </Form>
+            </Card.Content>
           </Card>
         ) : null}
       </div>
