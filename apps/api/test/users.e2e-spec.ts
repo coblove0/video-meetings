@@ -32,7 +32,7 @@ async function registerUser(app: INestApplication<App>) {
     .expect(201);
 
   const { accessToken } = response.body as AuthResponseBody;
-  return { accessToken, email };
+  return { accessToken, email, password };
 }
 
 describe('Users (e2e)', () => {
@@ -138,6 +138,54 @@ describe('Users (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .send({ name: 'a'.repeat(101) })
         .expect(400);
+    });
+  });
+
+  describe('POST /users/me/password', () => {
+    it('changes the password: old password stops working, new one logs in', async () => {
+      const { accessToken, email, password } = await registerUser(app);
+      const newPassword = 'N3wSecret!';
+
+      await request(app.getHttpServer())
+        .post('/users/me/password')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ currentPassword: password, newPassword })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email, password })
+        .expect(401);
+
+      await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email, password: newPassword })
+        .expect(200);
+    });
+
+    it('rejects the wrong current password and leaves the old one working', async () => {
+      const { accessToken, email, password } = await registerUser(app);
+
+      await request(app.getHttpServer())
+        .post('/users/me/password')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          currentPassword: 'not-the-current-password',
+          newPassword: 'N3wSecret!',
+        })
+        .expect(400);
+
+      await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email, password })
+        .expect(200);
+    });
+
+    it('rejects the request without an access token', async () => {
+      await request(app.getHttpServer())
+        .post('/users/me/password')
+        .send({ currentPassword: 'whatever', newPassword: 'N3wSecret!' })
+        .expect(401);
     });
   });
 });
