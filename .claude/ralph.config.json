@@ -1,10 +1,9 @@
 {
-  "active": true,
+  "active": false,
+  "maxIterations": 10,
+  "maxTurns": 500,
+  "prompt": "Прочитай .claude/ralph.md и следуй правилам оттуда. Возьми следующую открытую Issue из milestone '{milestone}' и реализуй его в '{branch}'",
   "phases": [
-    {
-      "milestone": "Фаза 3: Backend — загрузка и замена аватара",
-      "branch": "feature/phase-7"
-    },
     {
       "milestone": "Фаза 4: Frontend — загрузка аватара в UI",
       "branch": "feature/phase-8"
@@ -17,8 +16,5 @@
       "milestone": "Фаза 6: Frontend — форма смены пароля",
       "branch": "feature/phase-10"
     }
-  ],
-  "maxIterations": 30,
-  "maxTurns": 500,
-  "prompt": "Прочитай .claude/ralph.md и следуй правилам оттуда. Возьми следующую открытую Issue из milestone '{milestone}' и реализуй его в '{branch}'"
+  ]
 }
